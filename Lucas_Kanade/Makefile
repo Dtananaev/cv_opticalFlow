@@ -1,6 +1,6 @@
 ##
 #
-# Author: Nikolaus Mayer, 2015 (mayern@cs.uni-freiburg.de)
+# Author: Denis Tananaev, 2015
 #
 ##
 

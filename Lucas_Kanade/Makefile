@@ -6,10 +6,11 @@
 
 ## Where to look for includes (default is 'here')
 INCLUDE_DIRS += -I. 
-
+INCLUDE_DIRS += -I./src
+INCLUDE_DIRS += -I./include
 ## Compiler
 CXX ?= gcc
-
+OBJDIR=obj
 ## Compiler flags; extended in 'debug'/'release' rules
 CXXFLAGS += -W -Wall -Wextra -Wpedantic -std=c++11 -pthread -fopenmp
 

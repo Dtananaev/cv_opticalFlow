@@ -10,7 +10,9 @@ INCLUDE_DIRS += -I./src
 INCLUDE_DIRS += -I./include
 ## Compiler
 CXX ?= gcc
+
 OBJDIR=obj
+
 ## Compiler flags; extended in 'debug'/'release' rules
 CXXFLAGS += -W -Wall -Wextra -Wpedantic -std=c++11 -pthread -fopenmp
 
@@ -26,15 +28,15 @@ SOURCES = $(wildcard *.c *.cc *.cpp)
 HEADERS = $(wildcard *.h *.hh *.hpp)
 
 ## Build a *.o object file for every source file
-OBJECTS = $(addsuffix .o, $(basename $(SOURCES)))
-
+#OBJECTS = $(addsuffix  *.o, $(basename $(SOURCES)))
+OBJECTS = $(addprefix  $(OBJDIR)/, $(notdir $(SOURCES:.cpp=.o)))
 
 ## Tell the 'make' program that e.g. 'make clean' is not supposed to 
 #  create a file 'clean'
 # 
 #  "Why is it called 'phony'?" -- because it's not a real target. That 
 #  is, the target name isn't a file that is produced by the commands 
-#  of that target.
+#  of that target. 
 .PHONY: all clean debug release
 
 
@@ -61,15 +63,21 @@ $(TARGET): $(OBJECTS) Makefile
 
 ## Every object file depends on its source. It may also depend on
 #  potentially all header files, and of course the makefile itself.
-%.o: %.c Makefile $(HEADERS)
+$(OBJDIR)/%.o: %.c Makefile $(HEADERS)
 	$(info ... compiling $@ ...)
 	$(CXX) $(CXXFLAGS) $(INCLUDE_DIRS) -c $< -o $@
 
-%.o: %.cc Makefile $(HEADERS)
+$(OBJDIR)/%.o: %.cc Makefile $(HEADERS)
 	$(info ... compiling $@ ...)
 	$(CXX) $(CXXFLAGS) $(INCLUDE_DIRS) -c $< -o $@
 
-%.o: %.cpp Makefile $(HEADERS)
+$(OBJDIR)/%.o: %.cpp Makefile $(HEADERS)
 	$(info ... compiling $@ ...)
 	$(CXX) $(CXXFLAGS) $(INCLUDE_DIRS) -c $< -o $@
+
+$(OBJECTS): | $(OBJDIR)
+
+$(OBJDIR):
+	mkdir $(OBJDIR)
+
 

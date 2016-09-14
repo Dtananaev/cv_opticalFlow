@@ -329,7 +329,7 @@ int main(int argc, char** argv) {
 
     flowToImage(opticFlow, LucasKanadeFlowRGB);
 
-	LucasKanadeFlowRGB.writeToPPM(("result/"+folderNameInput+ std::to_string(i) + ".ppm").c_str());
+	LucasKanadeFlowRGB.writeToPPM(("result/"+folderNameInput + ".ppm").c_str());
 
     }
 

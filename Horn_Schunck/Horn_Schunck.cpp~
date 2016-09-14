@@ -258,7 +258,7 @@ CTensor<float> Horn_SchunkOptFlow(CMatrix<float> image1, CMatrix<float> image2, 
        diff_v=0;  
     for(int x=1; x<image1.xSize()-1; x++)
     		for(int y=1;y<image1.ySize()-1;y++) {  
-
+//Jacoby method
         //    u_k_new(x,y)= (1 / (4*alpha + Ix(x,y)*Ix(x,y)) ) * ( alpha* (u_k(x-1,y)+u_k(x+1,y)+u_k(x,y-1)+u_k(x,y+1))  -Ix(x,y)*Iy(x,y)*v_k(x,y) - Ix(x,y)*Iz(x,y) );
             
 

@@ -1,0 +1,3 @@
+2
+cropped-street_000009.pgm
+cropped-street_000010.pgm

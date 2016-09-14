@@ -206,10 +206,77 @@ void difForwXY(CMatrix<float> Image,  CMatrix<float> &dx, CMatrix<float> &dy){
 
 }
 
+void calculateTV(int x,int y, CMatrix<float> u_k,CMatrix<float> v_k, float& g_1,float& g_2, float& g_3, float& g_4 ){
+    float e = 0.001; // TV regularizer
 
-//Jacoby method
-CTensor<float> JacobyHS(CMatrix<float> image1, CMatrix<float> image2, float alpha, float treshold){
+/*
+        g_1 = 0.5* (A + B )
+        g_2 = 0.5* (A + C )
+        g_3 = 0.5* (A + D )   
+        g_4 = 0.5* (A + E ) 
+*/
+   //Calculating A  = g(x,y)    
 
+    
+        int a = x;
+        int b = y;
+
+       float SQgradU =  0.25* ( u_k(a+1,b)-u_k(a-1,b) ) * ( u_k(a+1,b)-u_k(a-1,b) )  + 0.25* ( u_k(a,b+1)-u_k(a,b-1) ) * ( u_k(a,b+1)-u_k(a,b-1) );
+
+       float SQgradV =  0.25* ( v_k(a+1,b)-v_k(a-1,b) ) * ( v_k(a+1,b)-v_k(a-1,b) )  + 0.25* ( v_k(a,b+1)-v_k(a,b-1) ) * ( v_k(a,b+1)-v_k(a,b-1) );
+
+       float A = 1/sqrt(   SQgradU + SQgradV +e*e  );
+
+
+        //Calculating B = g(x+1,y)  
+         a = x+1;  b = y;
+
+        SQgradU =  0.25* ( u_k(a+1,b)-u_k(a-1,b) ) * ( u_k(a+1,b)-u_k(a-1,b) )  + 0.25* ( u_k(a,b+1)-u_k(a,b-1) ) * ( u_k(a,b+1)-u_k(a,b-1) );
+
+        SQgradV =  0.25* ( v_k(a+1,b)-v_k(a-1,b) ) * ( v_k(a+1,b)-v_k(a-1,b) )  + 0.25* ( v_k(a,b+1)-v_k(a,b-1) ) * ( v_k(a,b+1)-v_k(a,b-1) );
+        
+       float B = 1/sqrt(   SQgradU + SQgradV +e*e  );
+
+        //Calculating C = g(x-1,y)  
+         a =x-1; b = y;
+ 
+        SQgradU =  0.25* ( u_k(a+1,b)-u_k(a-1,b) ) * ( u_k(a+1,b)-u_k(a-1,b) )  + 0.25* ( u_k(a,b+1)-u_k(a,b-1) ) * ( u_k(a,b+1)-u_k(a,b-1) );
+
+        SQgradV =  0.25* ( v_k(a+1,b)-v_k(a-1,b) ) * ( v_k(a+1,b)-v_k(a-1,b) )  + 0.25* ( v_k(a,b+1)-v_k(a,b-1) ) * ( v_k(a,b+1)-v_k(a,b-1) );
+        
+       float C = 1/sqrt(   SQgradU + SQgradV +e*e  );
+
+        //Calculating D = g(x,y+1)  
+         a =x; b = y+1;
+    
+        SQgradU =  0.25* ( u_k(a+1,b)-u_k(a-1,b) ) * ( u_k(a+1,b)-u_k(a-1,b) )  + 0.25* ( u_k(a,b+1)-u_k(a,b-1) ) * ( u_k(a,b+1)-u_k(a,b-1) );
+
+        SQgradV =  0.25* ( v_k(a+1,b)-v_k(a-1,b) ) * ( v_k(a+1,b)-v_k(a-1,b) )  + 0.25* ( v_k(a,b+1)-v_k(a,b-1) ) * ( v_k(a,b+1)-v_k(a,b-1) );
+        
+       float D = 1/sqrt(   SQgradU + SQgradV +e*e  );
+
+        //Calculating E = g(x,y-1)  
+         a =x; b =y-1;
+ 
+        SQgradU =  0.25* ( u_k(a+1,b)-u_k(a-1,b) ) * ( u_k(a+1,b)-u_k(a-1,b) )  + 0.25* ( u_k(a,b+1)-u_k(a,b-1) ) * ( u_k(a,b+1)-u_k(a,b-1) );
+
+        SQgradV =  0.25* ( v_k(a+1,b)-v_k(a-1,b) ) * ( v_k(a+1,b)-v_k(a-1,b) )  + 0.25* ( v_k(a,b+1)-v_k(a,b-1) ) * ( v_k(a,b+1)-v_k(a,b-1) );
+        
+       float E = 1/sqrt(   SQgradU + SQgradV +e*e  );
+
+
+    //Calculating our functions for solver and keep them constant for one iteration
+       g_1 = 0.5* (A + B );
+       g_2 = 0.5* (A + C );
+       g_3 = 0.5* (A + D );   
+       g_4 = 0.5* (A + E );
+   
+
+}
+
+//Jacoby method Horn-Schunck with TV smoothsness term
+CTensor<float> JacobyHSTV(CMatrix<float> image1, CMatrix<float> image2, float alpha, float treshold){
+      std::cout<<"1 "<<"\n";
          /*Jacoby method
             Linear system:
             Ax=b;  Split A=D+M; D-diagonal part of matrix ; M- outer diagonal part
@@ -220,6 +287,8 @@ CTensor<float> JacobyHS(CMatrix<float> image1, CMatrix<float> image2, float alph
     int width =image1.xSize();
     int height=image1.ySize();
     CTensor<float> result(width,height,2); //u and v optic flow result
+
+
 
     int number_of_pixels=width*height;
   // apply derivatives
@@ -234,19 +303,21 @@ CTensor<float> JacobyHS(CMatrix<float> image1, CMatrix<float> image2, float alph
         Iz(x,y)-=image1(x,y);
 }
    
-    //To make computation simpler  and have all matrices of the same size apply Neumann boundary conditions with border size 1 to derivatives and image1
+    //To make computation simpler  and have all matrices of the same size apply Dirichlet boundary conditions with border size 1 to derivatives and image1
     image1=Dirichlet_bound(image1,1);
     Iz=Dirichlet_bound(Iz,1);
     Ix=Dirichlet_bound(Ix,1);
     Iy=Dirichlet_bound(Iy,1);    
     //Horn-Schunck optic flow with Jacoby method
      CMatrix<float> u_k(image1);
-     CMatrix<float> v_k(image1);      
+     CMatrix<float> v_k(image1); 
+   //  CMatrix<float> u_k(image1.xSize(),image1.ySize(),0);
+   //  CMatrix<float> v_k(image1.xSize(),image1.ySize(),0);     
      CMatrix<float> u_k_new(image1.xSize(),image1.ySize(),0);
      CMatrix<float> v_k_new(image1.xSize(),image1.ySize(),0);
      float diff_u,diff_v;
 
-
+bool flag =false;
    
                     
   do{ 
@@ -254,25 +325,144 @@ CTensor<float> JacobyHS(CMatrix<float> image1, CMatrix<float> image2, float alph
        diff_v=0;  
     for(int x=1; x<image1.xSize()-1; x++)
     		for(int y=1;y<image1.ySize()-1;y++) {  
-//Gauss-Seidel method
+        
 
-                //Lower triangle (x-1,y) and (x,y-1)
 
-            u_k_new(x,y)= (1 / (4*alpha + Ix(x,y)*Ix(x,y)) ) * ( alpha* (u_k(x-1,y)+u_k(x+1,y)+u_k(x,y-1)+u_k(x,y+1))  -Ix(x,y)*Iy(x,y)*v_k(x,y) - Ix(x,y)*Iz(x,y) );
+        //Lagged diffusivity scheme: First calculate the nonlinear part which is TV diffusion
+         /*    
+
+        //Calculating the constant functions which represents the gradient flow between two pixels 
+         g_1 = g(x+0,5,y) = 0.5 * (g(x+1,y)+g(x,y))
+         g_2 = g(x-0,5,y) = 0.5 * (g(x-1,y)+g(x,y))
+         g_3 = g(x,y+0,5) = 0.5 * (g(x,y+1)+g(x,y))
+         g_4 = g(x,y-0,5) = 0.5 * (g(x,y-1)+g(x,y))
+
+        //Here g functions is represented by the TV for u and v optic flow vectors (smoothsness term of the Horn-Schunck optic flow). The TV function:
+        //Lets make new notation
+       A =  g(x,y) =  1/ sqrt( grad(u(x,y))^2   + grad(v(x,y))^2 + e^2)
+       B = g(x+1,y) =  1/ sqrt( grad(u(x+1,y))^2   + grad(v(x+1,y))^2 + e^2)
+       C = g(x-1,y) =  1/ sqrt( grad(u(x-1,y))^2   + grad(v(x-1,y))^2 + e^2)
+       D = g(x,y+1) = 1/ sqrt( grad(u(x,y+1))^2   + grad(v(x,y+1))^2 + e^2)
+       E = g(x,y-1) = 1/ sqrt( grad(u(x,y-1))^2   + grad(v(x,y-1))^2 + e^2)
+
+        from here 
+
+        g_1 = 0.5* (A + B )
+        g_2 = 0.5* (A + C )
+        g_3 = 0.5* (A + D )   
+        g_4 = 0.5* (A + E ) 
+  
+        */
+     
+        float g_1,g_2,g_3,g_4;
+    if(flag == false){
+
+        g_1=g_2=g_3=g_4=1;
+
+        flag=true;
+}else{
+
+
+    float e = 0.001; // TV regularizer
+
+/*
+        g_1 = 0.5* (A + B )
+        g_2 = 0.5* (A + C )
+        g_3 = 0.5* (A + D )   
+        g_4 = 0.5* (A + E ) 
+*/
+   //Calculating A  = g(x,y)    
+
+    
+        int a = x;
+        int b = y;
+
+       float SQgradU =  0.25* ( u_k(a+1,b)-u_k(a-1,b) ) * ( u_k(a+1,b)-u_k(a-1,b) )  + 0.25* ( u_k(a,b+1)-u_k(a,b-1) ) * ( u_k(a,b+1)-u_k(a,b-1) );
+
+       float SQgradV =  0.25* ( v_k(a+1,b)-v_k(a-1,b) ) * ( v_k(a+1,b)-v_k(a-1,b) )  + 0.25* ( v_k(a,b+1)-v_k(a,b-1) ) * ( v_k(a,b+1)-v_k(a,b-1) );
+
+       float A = 1/sqrt(   SQgradU + SQgradV +e*e  );
+
+
+        //Calculating B = g(x+1,y)  
+         a = x+1;  b = y;
+
+        SQgradU =  0.25* ( u_k(a+1,b)-u_k(a-1,b) ) * ( u_k(a+1,b)-u_k(a-1,b) )  + 0.25* ( u_k(a,b+1)-u_k(a,b-1) ) * ( u_k(a,b+1)-u_k(a,b-1) );
+
+        SQgradV =  0.25* ( v_k(a+1,b)-v_k(a-1,b) ) * ( v_k(a+1,b)-v_k(a-1,b) )  + 0.25* ( v_k(a,b+1)-v_k(a,b-1) ) * ( v_k(a,b+1)-v_k(a,b-1) );
+        
+       float B = 1/sqrt(   SQgradU + SQgradV +e*e  );
+
+        //Calculating C = g(x-1,y)  
+         a =x-1; b = y;
+ 
+        SQgradU =  0.25* ( u_k(a+1,b)-u_k(a-1,b) ) * ( u_k(a+1,b)-u_k(a-1,b) )  + 0.25* ( u_k(a,b+1)-u_k(a,b-1) ) * ( u_k(a,b+1)-u_k(a,b-1) );
+
+        SQgradV =  0.25* ( v_k(a+1,b)-v_k(a-1,b) ) * ( v_k(a+1,b)-v_k(a-1,b) )  + 0.25* ( v_k(a,b+1)-v_k(a,b-1) ) * ( v_k(a,b+1)-v_k(a,b-1) );
+        
+       float C = 1/sqrt(   SQgradU + SQgradV +e*e  );
+
+        //Calculating D = g(x,y+1)  
+         a =x; b = y+1;
+    
+        SQgradU =  0.25* ( u_k(a+1,b)-u_k(a-1,b) ) * ( u_k(a+1,b)-u_k(a-1,b) )  + 0.25* ( u_k(a,b+1)-u_k(a,b-1) ) * ( u_k(a,b+1)-u_k(a,b-1) );
+
+        SQgradV =  0.25* ( v_k(a+1,b)-v_k(a-1,b) ) * ( v_k(a+1,b)-v_k(a-1,b) )  + 0.25* ( v_k(a,b+1)-v_k(a,b-1) ) * ( v_k(a,b+1)-v_k(a,b-1) );
+        
+       float D = 1/sqrt(   SQgradU + SQgradV +e*e  );
+
+        //Calculating E = g(x,y-1)  
+         a =x; b =y-1;
+ 
+        SQgradU =  0.25* ( u_k(a+1,b)-u_k(a-1,b) ) * ( u_k(a+1,b)-u_k(a-1,b) )  + 0.25* ( u_k(a,b+1)-u_k(a,b-1) ) * ( u_k(a,b+1)-u_k(a,b-1) );
+
+        SQgradV =  0.25* ( v_k(a+1,b)-v_k(a-1,b) ) * ( v_k(a+1,b)-v_k(a-1,b) )  + 0.25* ( v_k(a,b+1)-v_k(a,b-1) ) * ( v_k(a,b+1)-v_k(a,b-1) );
+        
+       float E = 1/sqrt(   SQgradU + SQgradV +e*e  );
+
+
+    //Calculating our functions for solver and keep them constant for one iteration
+       g_1 = 0.5* (A + B );
+       g_2 = 0.5* (A + C );
+       g_3 = 0.5* (A + D );   
+       g_4 = 0.5* (A + E );
+
+}
+        //calculateTV( x, y, u_k, v_k,g_1, g_2,  g_3,  g_4 );
+
+    //Jacoby linear solver for Optic flow
+
+    /* Discretized form of the Horn-Schunk optic flow with TV diffusion for smoothness term 
+
+   For u:     (Ix(x,y)*u(x,y) + Iy(x,y)*v(x,y) + Iz(x,y))Ix(x,y) - alpha*(g_1 *u(x+1,y)+ g_2*u(x-1,y) +g_3*u(x,y+1) + g_4*u(x,y-1) - u(x,y)*(g_1+g_2+g_3+g_4) ) = 0
+
+
+   For v:     (Ix(x,y)*u(x,y) + Iy(x,y)*v(x,y) + Iz(x,y))Iy(x,y) - alpha*(g_1 *v(x+1,y)+ g_2*v(x-1,y) +g_3*v(x,y+1) + g_4*v(x,y-1) - v(x,y)*(g_1+g_2+g_3+g_4) ) = 0
+
+
+
+   */
+
+
+
+            u_k_new(x,y)= (1 / ((g_1+g_2+g_3+g_4)*alpha + Ix(x,y)*Ix(x,y)) ) * ( alpha* (g_2*u_k(x-1,y)+g_1*u_k(x+1,y)+g_4*u_k(x,y-1)+g_3*u_k(x,y+1))  -Ix(x,y)*Iy(x,y)*v_k(x,y) - Ix(x,y)*Iz(x,y) );
             
 
-            v_k_new(x,y) = (1/ (4*alpha+ Iy(x,y)*Iy(x,y)) )*(alpha* (v_k(x-1,y)+v_k(x+1,y)+v_k(x,y-1)+v_k(x,y+1)) - Iy(x,y)*Ix(x,y)*u_k(x,y) -Iy(x,y)*Iz(x,y) );
+            v_k_new(x,y) = (1/ ((g_1+g_2+g_3+g_4)*alpha+ Iy(x,y)*Iy(x,y)) )*(alpha* (g_2*v_k(x-1,y)+g_1*v_k(x+1,y)+g_4*v_k(x,y-1)+g_3*v_k(x,y+1)) - Iy(x,y)*Ix(x,y)*u_k(x,y) -Iy(x,y)*Iz(x,y) );
 
         diff_u+= (u_k_new(x,y)-u_k(x,y))*(u_k_new(x,y)-u_k(x,y));
         diff_v+= (v_k_new(x,y)-v_k(x,y))*(v_k_new(x,y)-v_k(x,y));    
             
-          
+
 
     }
+ 
          u_k=u_k_new;
          v_k=v_k_new;  
           diff_u=  diff_u/ number_of_pixels;
           diff_v=  diff_v/ number_of_pixels;
+        std::cout<<"diff_u "<<diff_u<<"\n";
+         std::cout<<"diff_v "<<diff_v<<"\n";
 } while (diff_u >treshold && diff_v> treshold);
 
         u_k_new=cut(u_k_new,1);
@@ -288,7 +478,7 @@ CTensor<float> JacobyHS(CMatrix<float> image1, CMatrix<float> image2, float alph
 
 
 //Gauss-Seidel method
-CTensor<float> GaussSeidelHS(CMatrix<float> image1, CMatrix<float> image2, float alpha, float treshold){
+CTensor<float> GaussSeidelHSTV(CMatrix<float> image1, CMatrix<float> image2, float alpha, float treshold){
 
 
          /*Gauss-Seidel method
@@ -316,19 +506,21 @@ CTensor<float> GaussSeidelHS(CMatrix<float> image1, CMatrix<float> image2, float
         Iz(x,y)-=image1(x,y);
 }
    
-    //To make computation simpler  and have all matrices of the same size apply Neumann boundary conditions with border size 1 to derivatives and image1
+      //To make computation simpler  and have all matrices of the same size apply Dirichlet boundary conditions with border size 1 to derivatives and image1
     image1=Dirichlet_bound(image1,1);
     Iz=Dirichlet_bound(Iz,1);
     Ix=Dirichlet_bound(Ix,1);
     Iy=Dirichlet_bound(Iy,1);    
     //Horn-Schunck optic flow with Jacoby method
      CMatrix<float> u_k(image1);
-     CMatrix<float> v_k(image1);      
+     CMatrix<float> v_k(image1); 
+   //  CMatrix<float> u_k(image1.xSize(),image1.ySize(),0);
+   //  CMatrix<float> v_k(image1.xSize(),image1.ySize(),0);     
      CMatrix<float> u_k_new(image1.xSize(),image1.ySize(),0);
      CMatrix<float> v_k_new(image1.xSize(),image1.ySize(),0);
      float diff_u,diff_v;
 
-
+bool flag =false;
    
                     
   do{ 
@@ -336,25 +528,144 @@ CTensor<float> GaussSeidelHS(CMatrix<float> image1, CMatrix<float> image2, float
        diff_v=0;  
     for(int x=1; x<image1.xSize()-1; x++)
     		for(int y=1;y<image1.ySize()-1;y++) {  
-//Gauss-Seidel method
+        
 
-                //Lower triangle (x-1,y) and (x,y-1)
 
-            u_k_new(x,y)= (1 / (4*alpha + Ix(x,y)*Ix(x,y)) ) * ( alpha* (u_k_new(x-1,y)+u_k(x+1,y)+u_k_new(x,y-1)+u_k(x,y+1))  -Ix(x,y)*Iy(x,y)*v_k(x,y) - Ix(x,y)*Iz(x,y) );
+        //Lagged diffusivity scheme: First calculate the nonlinear part which is TV diffusion
+         /*    
+
+        //Calculating the constant functions which represents the gradient flow between two pixels 
+         g_1 = g(x+0,5,y) = 0.5 * (g(x+1,y)+g(x,y))
+         g_2 = g(x-0,5,y) = 0.5 * (g(x-1,y)+g(x,y))
+         g_3 = g(x,y+0,5) = 0.5 * (g(x,y+1)+g(x,y))
+         g_4 = g(x,y-0,5) = 0.5 * (g(x,y-1)+g(x,y))
+
+        //Here g functions is represented by the TV for u and v optic flow vectors (smoothsness term of the Horn-Schunck optic flow). The TV function:
+        //Lets make new notation
+       A =  g(x,y) =  1/ sqrt( grad(u(x,y))^2   + grad(v(x,y))^2 + e^2)
+       B = g(x+1,y) =  1/ sqrt( grad(u(x+1,y))^2   + grad(v(x+1,y))^2 + e^2)
+       C = g(x-1,y) =  1/ sqrt( grad(u(x-1,y))^2   + grad(v(x-1,y))^2 + e^2)
+       D = g(x,y+1) = 1/ sqrt( grad(u(x,y+1))^2   + grad(v(x,y+1))^2 + e^2)
+       E = g(x,y-1) = 1/ sqrt( grad(u(x,y-1))^2   + grad(v(x,y-1))^2 + e^2)
+
+        from here 
+
+        g_1 = 0.5* (A + B )
+        g_2 = 0.5* (A + C )
+        g_3 = 0.5* (A + D )   
+        g_4 = 0.5* (A + E ) 
+  
+        */
+     
+        float g_1,g_2,g_3,g_4;
+    if(flag == false){
+
+        g_1=g_2=g_3=g_4=1;
+
+        flag=true;
+}else{
+
+
+    float e = 0.001; // TV regularizer
+
+/*
+        g_1 = 0.5* (A + B )
+        g_2 = 0.5* (A + C )
+        g_3 = 0.5* (A + D )   
+        g_4 = 0.5* (A + E ) 
+*/
+   //Calculating A  = g(x,y)    
+
+    
+        int a = x;
+        int b = y;
+
+       float SQgradU =  0.25* ( u_k(a+1,b)-u_k(a-1,b) ) * ( u_k(a+1,b)-u_k(a-1,b) )  + 0.25* ( u_k(a,b+1)-u_k(a,b-1) ) * ( u_k(a,b+1)-u_k(a,b-1) );
+
+       float SQgradV =  0.25* ( v_k(a+1,b)-v_k(a-1,b) ) * ( v_k(a+1,b)-v_k(a-1,b) )  + 0.25* ( v_k(a,b+1)-v_k(a,b-1) ) * ( v_k(a,b+1)-v_k(a,b-1) );
+
+       float A = 1/sqrt(   SQgradU + SQgradV +e*e  );
+
+
+        //Calculating B = g(x+1,y)  
+         a = x+1;  b = y;
+
+        SQgradU =  0.25* ( u_k(a+1,b)-u_k(a-1,b) ) * ( u_k(a+1,b)-u_k(a-1,b) )  + 0.25* ( u_k(a,b+1)-u_k(a,b-1) ) * ( u_k(a,b+1)-u_k(a,b-1) );
+
+        SQgradV =  0.25* ( v_k(a+1,b)-v_k(a-1,b) ) * ( v_k(a+1,b)-v_k(a-1,b) )  + 0.25* ( v_k(a,b+1)-v_k(a,b-1) ) * ( v_k(a,b+1)-v_k(a,b-1) );
+        
+       float B = 1/sqrt(   SQgradU + SQgradV +e*e  );
+
+        //Calculating C = g(x-1,y)  
+         a =x-1; b = y;
+ 
+        SQgradU =  0.25* ( u_k(a+1,b)-u_k(a-1,b) ) * ( u_k(a+1,b)-u_k(a-1,b) )  + 0.25* ( u_k(a,b+1)-u_k(a,b-1) ) * ( u_k(a,b+1)-u_k(a,b-1) );
+
+        SQgradV =  0.25* ( v_k(a+1,b)-v_k(a-1,b) ) * ( v_k(a+1,b)-v_k(a-1,b) )  + 0.25* ( v_k(a,b+1)-v_k(a,b-1) ) * ( v_k(a,b+1)-v_k(a,b-1) );
+        
+       float C = 1/sqrt(   SQgradU + SQgradV +e*e  );
+
+        //Calculating D = g(x,y+1)  
+         a =x; b = y+1;
+    
+        SQgradU =  0.25* ( u_k(a+1,b)-u_k(a-1,b) ) * ( u_k(a+1,b)-u_k(a-1,b) )  + 0.25* ( u_k(a,b+1)-u_k(a,b-1) ) * ( u_k(a,b+1)-u_k(a,b-1) );
+
+        SQgradV =  0.25* ( v_k(a+1,b)-v_k(a-1,b) ) * ( v_k(a+1,b)-v_k(a-1,b) )  + 0.25* ( v_k(a,b+1)-v_k(a,b-1) ) * ( v_k(a,b+1)-v_k(a,b-1) );
+        
+       float D = 1/sqrt(   SQgradU + SQgradV +e*e  );
+
+        //Calculating E = g(x,y-1)  
+         a =x; b =y-1;
+ 
+        SQgradU =  0.25* ( u_k(a+1,b)-u_k(a-1,b) ) * ( u_k(a+1,b)-u_k(a-1,b) )  + 0.25* ( u_k(a,b+1)-u_k(a,b-1) ) * ( u_k(a,b+1)-u_k(a,b-1) );
+
+        SQgradV =  0.25* ( v_k(a+1,b)-v_k(a-1,b) ) * ( v_k(a+1,b)-v_k(a-1,b) )  + 0.25* ( v_k(a,b+1)-v_k(a,b-1) ) * ( v_k(a,b+1)-v_k(a,b-1) );
+        
+       float E = 1/sqrt(   SQgradU + SQgradV +e*e  );
+
+
+    //Calculating our functions for solver and keep them constant for one iteration
+       g_1 = 0.5* (A + B );
+       g_2 = 0.5* (A + C );
+       g_3 = 0.5* (A + D );   
+       g_4 = 0.5* (A + E );
+
+}
+        //calculateTV( x, y, u_k, v_k,g_1, g_2,  g_3,  g_4 );
+
+    //Gauus-Seidel linear solver for Optic flow
+
+    /* Discretized form of the Horn-Schunk optic flow with TV diffusion for smoothness term 
+
+   For u:     (Ix(x,y)*u(x,y) + Iy(x,y)*v(x,y) + Iz(x,y))Ix(x,y) - alpha*(g_1 *u(x+1,y)+ g_2*u(x-1,y) +g_3*u(x,y+1) + g_4*u(x,y-1) - u(x,y)*(g_1+g_2+g_3+g_4) ) = 0
+
+
+   For v:     (Ix(x,y)*u(x,y) + Iy(x,y)*v(x,y) + Iz(x,y))Iy(x,y) - alpha*(g_1 *v(x+1,y)+ g_2*v(x-1,y) +g_3*v(x,y+1) + g_4*v(x,y-1) - v(x,y)*(g_1+g_2+g_3+g_4) ) = 0
+
+
+
+   */
+
+
+
+            u_k_new(x,y)= (1 / ((g_1+g_2+g_3+g_4)*alpha + Ix(x,y)*Ix(x,y)) ) * ( alpha* (g_2*u_k_new(x-1,y)+g_1*u_k(x+1,y)+g_4*u_k_new(x,y-1)+g_3*u_k(x,y+1))  -Ix(x,y)*Iy(x,y)*v_k(x,y) - Ix(x,y)*Iz(x,y) );
             
 
-            v_k_new(x,y) = (1/ (4*alpha+ Iy(x,y)*Iy(x,y)) )*(alpha* (v_k_new(x-1,y)+v_k(x+1,y)+v_k_new(x,y-1)+v_k(x,y+1)) - Iy(x,y)*Ix(x,y)*u_k_new(x,y) -Iy(x,y)*Iz(x,y) );
+            v_k_new(x,y) = (1/ ((g_1+g_2+g_3+g_4)*alpha+ Iy(x,y)*Iy(x,y)) )*(alpha* (g_2*v_k_new(x-1,y)+g_1*v_k(x+1,y)+g_4*v_k_new(x,y-1)+g_3*v_k(x,y+1)) - Iy(x,y)*Ix(x,y)*u_k_new(x,y) -Iy(x,y)*Iz(x,y) );
 
         diff_u+= (u_k_new(x,y)-u_k(x,y))*(u_k_new(x,y)-u_k(x,y));
         diff_v+= (v_k_new(x,y)-v_k(x,y))*(v_k_new(x,y)-v_k(x,y));    
             
-          
+
 
     }
+ 
          u_k=u_k_new;
          v_k=v_k_new;  
           diff_u=  diff_u/ number_of_pixels;
           diff_v=  diff_v/ number_of_pixels;
+        std::cout<<"diff_u "<<diff_u<<"\n";
+         std::cout<<"diff_v "<<diff_v<<"\n";
 } while (diff_u >treshold && diff_v> treshold);
 
         u_k_new=cut(u_k_new,1);
@@ -369,7 +680,7 @@ CTensor<float> GaussSeidelHS(CMatrix<float> image1, CMatrix<float> image2, float
 
 
 //Succesive over-relaxation (SOR)
-CTensor<float> SORHS(CMatrix<float> image1, CMatrix<float> image2, float alpha, float treshold){
+CTensor<float> SORHSTV(CMatrix<float> image1, CMatrix<float> image2, float alpha, float treshold){
 
 
          /*Succesive over-relaxation method
@@ -399,19 +710,21 @@ CTensor<float> SORHS(CMatrix<float> image1, CMatrix<float> image2, float alpha, 
         Iz(x,y)-=image1(x,y);
 }
    
-    //To make computation simpler  and have all matrices of the same size apply Neumann boundary conditions with border size 1 to derivatives and image1
+     //To make computation simpler  and have all matrices of the same size apply Dirichlet boundary conditions with border size 1 to derivatives and image1
     image1=Dirichlet_bound(image1,1);
     Iz=Dirichlet_bound(Iz,1);
     Ix=Dirichlet_bound(Ix,1);
     Iy=Dirichlet_bound(Iy,1);    
     //Horn-Schunck optic flow with Jacoby method
      CMatrix<float> u_k(image1);
-     CMatrix<float> v_k(image1);      
+     CMatrix<float> v_k(image1); 
+   //  CMatrix<float> u_k(image1.xSize(),image1.ySize(),0);
+   //  CMatrix<float> v_k(image1.xSize(),image1.ySize(),0);     
      CMatrix<float> u_k_new(image1.xSize(),image1.ySize(),0);
      CMatrix<float> v_k_new(image1.xSize(),image1.ySize(),0);
      float diff_u,diff_v;
 
-
+bool flag =false;
    
                     
   do{ 
@@ -419,27 +732,144 @@ CTensor<float> SORHS(CMatrix<float> image1, CMatrix<float> image2, float alpha, 
        diff_v=0;  
     for(int x=1; x<image1.xSize()-1; x++)
     		for(int y=1;y<image1.ySize()-1;y++) {  
-//Gauss-Seidel method
+        
 
-                //Lower triangle (x-1,y) and (x,y-1)
 
-            u_k_new(x,y)=(1-w)*u_k(x,y)+ w * (1 / (4*alpha + Ix(x,y)*Ix(x,y)) ) * ( alpha* (u_k_new(x-1,y)+u_k(x+1,y)+u_k_new(x,y-1)+u_k(x,y+1))  -Ix(x,y)*Iy(x,y)*v_k(x,y) - Ix(x,y)*Iz(x,y) );
+        //Lagged diffusivity scheme: First calculate the nonlinear part which is TV diffusion
+         /*    
+
+        //Calculating the constant functions which represents the gradient flow between two pixels 
+         g_1 = g(x+0,5,y) = 0.5 * (g(x+1,y)+g(x,y))
+         g_2 = g(x-0,5,y) = 0.5 * (g(x-1,y)+g(x,y))
+         g_3 = g(x,y+0,5) = 0.5 * (g(x,y+1)+g(x,y))
+         g_4 = g(x,y-0,5) = 0.5 * (g(x,y-1)+g(x,y))
+
+        //Here g functions is represented by the TV for u and v optic flow vectors (smoothsness term of the Horn-Schunck optic flow). The TV function:
+        //Lets make new notation
+       A =  g(x,y) =  1/ sqrt( grad(u(x,y))^2   + grad(v(x,y))^2 + e^2)
+       B = g(x+1,y) =  1/ sqrt( grad(u(x+1,y))^2   + grad(v(x+1,y))^2 + e^2)
+       C = g(x-1,y) =  1/ sqrt( grad(u(x-1,y))^2   + grad(v(x-1,y))^2 + e^2)
+       D = g(x,y+1) = 1/ sqrt( grad(u(x,y+1))^2   + grad(v(x,y+1))^2 + e^2)
+       E = g(x,y-1) = 1/ sqrt( grad(u(x,y-1))^2   + grad(v(x,y-1))^2 + e^2)
+
+        from here 
+
+        g_1 = 0.5* (A + B )
+        g_2 = 0.5* (A + C )
+        g_3 = 0.5* (A + D )   
+        g_4 = 0.5* (A + E ) 
+  
+        */
+     
+        float g_1,g_2,g_3,g_4;
+    if(flag == false){
+
+        g_1=g_2=g_3=g_4=1;
+
+        flag=true;
+}else{
+
+
+    float e = 0.001; // TV regularizer
+
+/*
+        g_1 = 0.5* (A + B )
+        g_2 = 0.5* (A + C )
+        g_3 = 0.5* (A + D )   
+        g_4 = 0.5* (A + E ) 
+*/
+   //Calculating A  = g(x,y)    
+
+    
+        int a = x;
+        int b = y;
+
+       float SQgradU =  0.25* ( u_k(a+1,b)-u_k(a-1,b) ) * ( u_k(a+1,b)-u_k(a-1,b) )  + 0.25* ( u_k(a,b+1)-u_k(a,b-1) ) * ( u_k(a,b+1)-u_k(a,b-1) );
+
+       float SQgradV =  0.25* ( v_k(a+1,b)-v_k(a-1,b) ) * ( v_k(a+1,b)-v_k(a-1,b) )  + 0.25* ( v_k(a,b+1)-v_k(a,b-1) ) * ( v_k(a,b+1)-v_k(a,b-1) );
+
+       float A = 1/sqrt(   SQgradU + SQgradV +e*e  );
+
+
+        //Calculating B = g(x+1,y)  
+         a = x+1;  b = y;
+
+        SQgradU =  0.25* ( u_k(a+1,b)-u_k(a-1,b) ) * ( u_k(a+1,b)-u_k(a-1,b) )  + 0.25* ( u_k(a,b+1)-u_k(a,b-1) ) * ( u_k(a,b+1)-u_k(a,b-1) );
+
+        SQgradV =  0.25* ( v_k(a+1,b)-v_k(a-1,b) ) * ( v_k(a+1,b)-v_k(a-1,b) )  + 0.25* ( v_k(a,b+1)-v_k(a,b-1) ) * ( v_k(a,b+1)-v_k(a,b-1) );
+        
+       float B = 1/sqrt(   SQgradU + SQgradV +e*e  );
+
+        //Calculating C = g(x-1,y)  
+         a =x-1; b = y;
+ 
+        SQgradU =  0.25* ( u_k(a+1,b)-u_k(a-1,b) ) * ( u_k(a+1,b)-u_k(a-1,b) )  + 0.25* ( u_k(a,b+1)-u_k(a,b-1) ) * ( u_k(a,b+1)-u_k(a,b-1) );
+
+        SQgradV =  0.25* ( v_k(a+1,b)-v_k(a-1,b) ) * ( v_k(a+1,b)-v_k(a-1,b) )  + 0.25* ( v_k(a,b+1)-v_k(a,b-1) ) * ( v_k(a,b+1)-v_k(a,b-1) );
+        
+       float C = 1/sqrt(   SQgradU + SQgradV +e*e  );
+
+        //Calculating D = g(x,y+1)  
+         a =x; b = y+1;
+    
+        SQgradU =  0.25* ( u_k(a+1,b)-u_k(a-1,b) ) * ( u_k(a+1,b)-u_k(a-1,b) )  + 0.25* ( u_k(a,b+1)-u_k(a,b-1) ) * ( u_k(a,b+1)-u_k(a,b-1) );
+
+        SQgradV =  0.25* ( v_k(a+1,b)-v_k(a-1,b) ) * ( v_k(a+1,b)-v_k(a-1,b) )  + 0.25* ( v_k(a,b+1)-v_k(a,b-1) ) * ( v_k(a,b+1)-v_k(a,b-1) );
+        
+       float D = 1/sqrt(   SQgradU + SQgradV +e*e  );
+
+        //Calculating E = g(x,y-1)  
+         a =x; b =y-1;
+ 
+        SQgradU =  0.25* ( u_k(a+1,b)-u_k(a-1,b) ) * ( u_k(a+1,b)-u_k(a-1,b) )  + 0.25* ( u_k(a,b+1)-u_k(a,b-1) ) * ( u_k(a,b+1)-u_k(a,b-1) );
+
+        SQgradV =  0.25* ( v_k(a+1,b)-v_k(a-1,b) ) * ( v_k(a+1,b)-v_k(a-1,b) )  + 0.25* ( v_k(a,b+1)-v_k(a,b-1) ) * ( v_k(a,b+1)-v_k(a,b-1) );
+        
+       float E = 1/sqrt(   SQgradU + SQgradV +e*e  );
+
+
+    //Calculating our functions for solver and keep them constant for one iteration
+       g_1 = 0.5* (A + B );
+       g_2 = 0.5* (A + C );
+       g_3 = 0.5* (A + D );   
+       g_4 = 0.5* (A + E );
+
+}
+        //calculateTV( x, y, u_k, v_k,g_1, g_2,  g_3,  g_4 );
+
+    //SOR linear solver for Optic flow
+
+    /* Discretized form of the Horn-Schunk optic flow with TV diffusion for smoothness term 
+
+   For u:     (Ix(x,y)*u(x,y) + Iy(x,y)*v(x,y) + Iz(x,y))Ix(x,y) - alpha*(g_1 *u(x+1,y)+ g_2*u(x-1,y) +g_3*u(x,y+1) + g_4*u(x,y-1) - u(x,y)*(g_1+g_2+g_3+g_4) ) = 0
+
+
+   For v:     (Ix(x,y)*u(x,y) + Iy(x,y)*v(x,y) + Iz(x,y))Iy(x,y) - alpha*(g_1 *v(x+1,y)+ g_2*v(x-1,y) +g_3*v(x,y+1) + g_4*v(x,y-1) - v(x,y)*(g_1+g_2+g_3+g_4) ) = 0
+
+
+
+   */
+
+
+
+            u_k_new(x,y)=(1-w)*u_k(x,y) + w* (1 / ((g_1+g_2+g_3+g_4)*alpha + Ix(x,y)*Ix(x,y)) ) * ( alpha* (g_2*u_k_new(x-1,y)+g_1*u_k(x+1,y)+g_4*u_k_new(x,y-1)+g_3*u_k(x,y+1))  -Ix(x,y)*Iy(x,y)*v_k(x,y) - Ix(x,y)*Iz(x,y) );
             
 
-            v_k_new(x,y) =(1-w)*v_k(x,y)+ w * (1/ (4*alpha+ Iy(x,y)*Iy(x,y)) )*(alpha* (v_k_new(x-1,y)+v_k(x+1,y)+v_k_new(x,y-1)+v_k(x,y+1)) - Iy(x,y)*Ix(x,y)*u_k_new(x,y) -Iy(x,y)*Iz(x,y) );
+            v_k_new(x,y) = (1-w)*v_k(x,y) + w* (1/ ((g_1+g_2+g_3+g_4)*alpha+ Iy(x,y)*Iy(x,y)) )*(alpha* (g_2*v_k_new(x-1,y)+g_1*v_k(x+1,y)+g_4*v_k_new(x,y-1)+g_3*v_k(x,y+1)) - Iy(x,y)*Ix(x,y)*u_k_new(x,y) -Iy(x,y)*Iz(x,y) );
 
         diff_u+= (u_k_new(x,y)-u_k(x,y))*(u_k_new(x,y)-u_k(x,y));
         diff_v+= (v_k_new(x,y)-v_k(x,y))*(v_k_new(x,y)-v_k(x,y));    
             
-          
+
 
     }
+ 
          u_k=u_k_new;
          v_k=v_k_new;  
           diff_u=  diff_u/ number_of_pixels;
           diff_v=  diff_v/ number_of_pixels;
-            //std::cout<<"diff_u "<< diff_u<<"\n";
-           // std::cout<<"diff_v "<< diff_v<<"\n";
+        std::cout<<"diff_u "<<diff_u<<"\n";
+         std::cout<<"diff_v "<<diff_v<<"\n";
 } while (diff_u >treshold && diff_v> treshold);
 
         u_k_new=cut(u_k_new,1);
@@ -449,6 +879,7 @@ CTensor<float> SORHS(CMatrix<float> image1, CMatrix<float> image2, float alpha, 
        result.putMatrix(v_k_new,1);      
 
     return result; 
+
 
 }
 
@@ -481,11 +912,11 @@ CTensor<float> Horn_SchunkOptFlow(CMatrix<float> image1, CMatrix<float> image2, 
 
 
     if(method_choice==method::Jacoby){
-        result=JacobyHS(image1, image2,  alpha,  treshold);
+        result=JacobyHSTV(image1, image2,  alpha,  treshold);
     }else if(method_choice==method::Gauss_Seidel){
-        result=GaussSeidelHS( image1,  image2,  alpha,  treshold);
+        result=GaussSeidelHSTV( image1,  image2,  alpha,  treshold);
     }else if(method_choice==method::SOR){
-        result = SORHS( image1, image2,  alpha,  treshold);
+        result = SORHSTV( image1, image2,  alpha,  treshold);
     }
 return result;
   
@@ -518,13 +949,13 @@ int main(int argc, char** argv) {
 
     int method_choice;
 
-    std::cout<<"Choose solver: [1] - Jacoby; [2] - Gauss-Seidel; [3] - SOR "<<"\n";
+    std::cout<<"Choose solver: [1] - Jacoby; [2] - Gauss-Seidel; [3] - SOR (Best: Gauss-Seidel)"<<"\n";
     std::cin>>method_choice;
     if(method_choice ==1 || method_choice==2 || method_choice==3 ){
         std::cout<<"Processing..."<<"\n";
     }else{
-         std::cout<<"Wrong input! By default activated  Jacoby solver"<<"\n";
-         method_choice=method::Jacoby;
+         std::cout<<"Wrong input! By default activated  Gauss-Seidel solver"<<"\n";
+         method_choice=method::Gauss_Seidel;
 
     }
 
@@ -535,7 +966,7 @@ int main(int argc, char** argv) {
    //seq = loadSequence("resources/gsalesman/t.txt");
       CMatrix<float> img1;
       CMatrix<float> img2;
-      bool presmoothing=false;
+      bool presmoothing=true;
        CTensor<float> opticFlow;
 
     for (int i = 0; i < seq.size()-1; ++i){
@@ -544,8 +975,8 @@ int main(int argc, char** argv) {
 	    img2 = seq(i+1);
         opticFlow(img1.xSize(),img1.ySize(),2);
 
-      float alpha = 400;
-      float treshold= 0.0000000000001;
+      float alpha = 60;
+      float treshold= 0.0000001;
 
         opticFlow=Horn_SchunkOptFlow(img1 ,img2, sigma,  presmoothing, alpha,  treshold, method_choice);
 

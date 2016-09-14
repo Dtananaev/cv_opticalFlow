@@ -1,1 +1,0 @@
-/usr/bin/c++       CMakeFiles/Lucas_Kanade.dir/Lucas_Kanade/Lucas_Kanade.cpp.o  -o Lucas_Kanade -rdynamic 

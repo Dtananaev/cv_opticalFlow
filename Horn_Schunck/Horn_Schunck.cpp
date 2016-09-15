@@ -240,8 +240,10 @@ CTensor<float> JacobyHS(CMatrix<float> image1, CMatrix<float> image2, float alph
     Ix=Dirichlet_bound(Ix,1);
     Iy=Dirichlet_bound(Iy,1);    
     //Horn-Schunck optic flow with Jacoby method
-     CMatrix<float> u_k(image1);
-     CMatrix<float> v_k(image1);      
+   //  CMatrix<float> u_k(image1);
+    // CMatrix<float> v_k(image1); 
+     CMatrix<float> u_k(image1.xSize(),image1.ySize(),1);
+     CMatrix<float> v_k(image1.xSize(),image1.ySize(),1);        
      CMatrix<float> u_k_new(image1.xSize(),image1.ySize(),0);
      CMatrix<float> v_k_new(image1.xSize(),image1.ySize(),0);
      float diff_u,diff_v;
@@ -273,6 +275,8 @@ CTensor<float> JacobyHS(CMatrix<float> image1, CMatrix<float> image2, float alph
          v_k=v_k_new;  
           diff_u=  diff_u/ number_of_pixels;
           diff_v=  diff_v/ number_of_pixels;
+         std::cout<<"diff_u "<<diff_u<<"\n";
+         std::cout<<"diff_v "<<diff_v<<"\n";
 } while (diff_u >treshold && diff_v> treshold);
 
         u_k_new=cut(u_k_new,1);
@@ -322,8 +326,10 @@ CTensor<float> GaussSeidelHS(CMatrix<float> image1, CMatrix<float> image2, float
     Ix=Dirichlet_bound(Ix,1);
     Iy=Dirichlet_bound(Iy,1);    
     //Horn-Schunck optic flow with Jacoby method
-     CMatrix<float> u_k(image1);
-     CMatrix<float> v_k(image1);      
+     //CMatrix<float> u_k(image1);
+     //CMatrix<float> v_k(image1);
+     CMatrix<float> u_k(image1.xSize(),image1.ySize(),1);
+     CMatrix<float> v_k(image1.xSize(),image1.ySize(),1);      
      CMatrix<float> u_k_new(image1.xSize(),image1.ySize(),0);
      CMatrix<float> v_k_new(image1.xSize(),image1.ySize(),0);
      float diff_u,diff_v;
@@ -355,6 +361,8 @@ CTensor<float> GaussSeidelHS(CMatrix<float> image1, CMatrix<float> image2, float
          v_k=v_k_new;  
           diff_u=  diff_u/ number_of_pixels;
           diff_v=  diff_v/ number_of_pixels;
+         std::cout<<"diff_u "<<diff_u<<"\n";
+         std::cout<<"diff_v "<<diff_v<<"\n";
 } while (diff_u >treshold && diff_v> treshold);
 
         u_k_new=cut(u_k_new,1);
@@ -405,8 +413,10 @@ CTensor<float> SORHS(CMatrix<float> image1, CMatrix<float> image2, float alpha, 
     Ix=Dirichlet_bound(Ix,1);
     Iy=Dirichlet_bound(Iy,1);    
     //Horn-Schunck optic flow with Jacoby method
-     CMatrix<float> u_k(image1);
-     CMatrix<float> v_k(image1);      
+     //CMatrix<float> u_k(image1);
+     //CMatrix<float> v_k(image1);  
+     CMatrix<float> u_k(image1.xSize(),image1.ySize(),1);
+     CMatrix<float> v_k(image1.xSize(),image1.ySize(),1);       
      CMatrix<float> u_k_new(image1.xSize(),image1.ySize(),0);
      CMatrix<float> v_k_new(image1.xSize(),image1.ySize(),0);
      float diff_u,diff_v;
@@ -438,8 +448,8 @@ CTensor<float> SORHS(CMatrix<float> image1, CMatrix<float> image2, float alpha, 
          v_k=v_k_new;  
           diff_u=  diff_u/ number_of_pixels;
           diff_v=  diff_v/ number_of_pixels;
-            //std::cout<<"diff_u "<< diff_u<<"\n";
-           // std::cout<<"diff_v "<< diff_v<<"\n";
+            std::cout<<"diff_u "<< diff_u<<"\n";
+            std::cout<<"diff_v "<< diff_v<<"\n";
 } while (diff_u >treshold && diff_v> treshold);
 
         u_k_new=cut(u_k_new,1);
@@ -531,7 +541,8 @@ int main(int argc, char** argv) {
     CVector<CMatrix<float> > seq;
     
     //seq = loadSequence("resources/cropped-street/t.txt");
-    seq = loadSequence("resources/yos/t.txt");
+ //   seq = loadSequence("resources/yos/t.txt");
+    seq = loadSequence("resources/bamboo_2gray/t.txt");
    //seq = loadSequence("resources/gsalesman/t.txt");
       CMatrix<float> img1;
       CMatrix<float> img2;
@@ -545,8 +556,8 @@ int main(int argc, char** argv) {
         opticFlow(img1.xSize(),img1.ySize(),2);
 
       float alpha = 400;
-      float treshold= 0.0000000000001;
-
+      //float treshold= 0.0000000000001;
+      float treshold= 0.0000001;
         opticFlow=Horn_SchunkOptFlow(img1 ,img2, sigma,  presmoothing, alpha,  treshold, method_choice);
 
     CTensor<float> Horn_SchunkFlowRGB(img1.xSize(), img1.ySize(),3);

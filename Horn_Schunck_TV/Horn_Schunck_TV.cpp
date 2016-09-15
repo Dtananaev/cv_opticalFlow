@@ -276,7 +276,8 @@ void calculateTV(int x,int y, CMatrix<float> u_k,CMatrix<float> v_k, float& g_1,
 
 //Jacoby method Horn-Schunck with TV smoothsness term
 CTensor<float> JacobyHSTV(CMatrix<float> image1, CMatrix<float> image2, float alpha, float treshold){
-      std::cout<<"1 "<<"\n";
+
+    int counter =0;
          /*Jacoby method
             Linear system:
             Ax=b;  Split A=D+M; D-diagonal part of matrix ; M- outer diagonal part
@@ -463,7 +464,9 @@ bool flag =false;
           diff_v=  diff_v/ number_of_pixels;
         std::cout<<"diff_u "<<diff_u<<"\n";
          std::cout<<"diff_v "<<diff_v<<"\n";
-} while (diff_u >treshold && diff_v> treshold);
+        counter+=1;
+         std::cout<<"counter "<<counter<<"\n";
+} while ( diff_u >treshold && diff_v> treshold );
 
         u_k_new=cut(u_k_new,1);
         v_k_new=cut(v_k_new,1); 
@@ -479,7 +482,7 @@ bool flag =false;
 
 //Gauss-Seidel method
 CTensor<float> GaussSeidelHSTV(CMatrix<float> image1, CMatrix<float> image2, float alpha, float treshold){
-
+    int counter=0;
 
          /*Gauss-Seidel method
             Linear system:
@@ -666,7 +669,11 @@ bool flag =false;
           diff_v=  diff_v/ number_of_pixels;
         std::cout<<"diff_u "<<diff_u<<"\n";
          std::cout<<"diff_v "<<diff_v<<"\n";
-} while (diff_u >treshold && diff_v> treshold);
+        counter+=1;
+        std::cout<<"counter "<<counter<<"\n";
+        if(counter>=3000){break;}
+
+} while ( diff_u >treshold && diff_v> treshold);
 
         u_k_new=cut(u_k_new,1);
         v_k_new=cut(v_k_new,1); 
@@ -692,7 +699,7 @@ CTensor<float> SORHSTV(CMatrix<float> image1, CMatrix<float> image2, float alpha
             w between 0 and 1
         */
     float w = 1.67;
-    
+    int counter=0;
     int width =image1.xSize();
     int height=image1.ySize();
     CTensor<float> result(width,height,2); //u and v optic flow result
@@ -870,7 +877,10 @@ bool flag =false;
           diff_v=  diff_v/ number_of_pixels;
         std::cout<<"diff_u "<<diff_u<<"\n";
          std::cout<<"diff_v "<<diff_v<<"\n";
-} while (diff_u >treshold && diff_v> treshold);
+
+        counter+=1;
+         std::cout<<"counter "<<counter<<"\n";
+} while ( diff_u >treshold && diff_v> treshold);
 
         u_k_new=cut(u_k_new,1);
         v_k_new=cut(v_k_new,1); 
@@ -962,11 +972,11 @@ int main(int argc, char** argv) {
     CVector<CMatrix<float> > seq;
     
     //seq = loadSequence("resources/cropped-street/t.txt");
-    seq = loadSequence("resources/yos/t.txt");
-   //seq = loadSequence("resources/gsalesman/t.txt");
+    //seq = loadSequence("resources/yos/t.txt");
+   seq = loadSequence("resources/gsalesman/t.txt");
       CMatrix<float> img1;
       CMatrix<float> img2;
-      bool presmoothing=true;
+      bool presmoothing=false;
        CTensor<float> opticFlow;
 
     for (int i = 0; i < seq.size()-1; ++i){
@@ -976,8 +986,8 @@ int main(int argc, char** argv) {
         opticFlow(img1.xSize(),img1.ySize(),2);
 
       float alpha = 60;
-      float treshold= 0.0000001;
-
+      float treshold= 0.000001;
+   //float treshold= 1;
         opticFlow=Horn_SchunkOptFlow(img1 ,img2, sigma,  presmoothing, alpha,  treshold, method_choice);
 
     CTensor<float> Horn_SchunkFlowRGB(img1.xSize(), img1.ySize(),3);

@@ -19,6 +19,13 @@
 #include "string"
 
 
+enum method{
+    Jacoby=1,
+    Gauss_Seidel=2,
+    SOR=3
+
+};
+
 //Dirichlet boundary conditions
 CMatrix<float> Dirichlet_bound(CMatrix<float> aImage,int border_size){
 
@@ -199,38 +206,27 @@ void difForwXY(CMatrix<float> Image,  CMatrix<float> &dx, CMatrix<float> &dy){
 
 }
 
-CTensor<float> Horn_SchunkOptFlow(CMatrix<float> image1, CMatrix<float> image2, int sigma, bool presmoothing, float alpha, float treshold){
-    
+
+//Jacoby method
+CTensor<float> JacobyHS(CMatrix<float> image1, CMatrix<float> image2, float alpha, float treshold){
+
+         /*Jacoby method
+            Linear system:
+            Ax=b;  Split A=D+M; D-diagonal part of matrix ; M- outer diagonal part
+            Iterative equation:
+            x(k+1)=D^-1 * (b-Mx(k)) 
+        */
+   
     int width =image1.xSize();
     int height=image1.ySize();
-    int number_of_pixels=width*height;
-
     CTensor<float> result(width,height,2); //u and v optic flow result
-    int border_size=3*sigma;
-    CMatrix<float> kernel;
 
-       
-    if(sigma>0){
-      kernel=Gauss(sigma);//create Gauss kernel
-        //Pre-smooth  image with Gauss kernel if presmoothing is true
-        if(presmoothing==true){
-        //apply Neumann boundary condition 
-        image1=Neumann_bound(image1,border_size);
-	    image2=Neumann_bound(image2,border_size); 
-        //Pre-smoothing initial images
-        image1=Gfilter(kernel, image1, border_size);
-        image2=Gfilter(kernel, image2, border_size);
-        image1=cut(image1, border_size);
-        image2=cut(image2, border_size);    
-        }
-    }
-
-
-    // apply derivatives
+    int number_of_pixels=width*height;
+  // apply derivatives
     CMatrix<float> Ix(width,height);
     CMatrix<float> Iy(width,height); 
     diffXY(image1, Ix, Iy);
-//difForwXY(image1, Ix, Iy);
+
 
     CMatrix<float> Iz(image2);  
       for(int x=0; x<width; x++)
@@ -244,12 +240,14 @@ CTensor<float> Horn_SchunkOptFlow(CMatrix<float> image1, CMatrix<float> image2, 
     Ix=Dirichlet_bound(Ix,1);
     Iy=Dirichlet_bound(Iy,1);    
     //Horn-Schunck optic flow with Jacoby method
-     CMatrix<float> u_k(image1);
-     CMatrix<float> v_k(image1);      
+   //  CMatrix<float> u_k(image1);
+    // CMatrix<float> v_k(image1); 
+     CMatrix<float> u_k(image1.xSize(),image1.ySize(),1);
+     CMatrix<float> v_k(image1.xSize(),image1.ySize(),1);        
      CMatrix<float> u_k_new(image1.xSize(),image1.ySize(),0);
      CMatrix<float> v_k_new(image1.xSize(),image1.ySize(),0);
      float diff_u,diff_v;
-    // float treshold = 0.01;
+
 
    
                     
@@ -258,15 +256,14 @@ CTensor<float> Horn_SchunkOptFlow(CMatrix<float> image1, CMatrix<float> image2, 
        diff_v=0;  
     for(int x=1; x<image1.xSize()-1; x++)
     		for(int y=1;y<image1.ySize()-1;y++) {  
-//Jacoby method
-        //    u_k_new(x,y)= (1 / (4*alpha + Ix(x,y)*Ix(x,y)) ) * ( alpha* (u_k(x-1,y)+u_k(x+1,y)+u_k(x,y-1)+u_k(x,y+1))  -Ix(x,y)*Iy(x,y)*v_k(x,y) - Ix(x,y)*Iz(x,y) );
+//Gauss-Seidel method
+
+                //Lower triangle (x-1,y) and (x,y-1)
+
+            u_k_new(x,y)= (1 / (4*alpha + Ix(x,y)*Ix(x,y)) ) * ( alpha* (u_k(x-1,y)+u_k(x+1,y)+u_k(x,y-1)+u_k(x,y+1))  -Ix(x,y)*Iy(x,y)*v_k(x,y) - Ix(x,y)*Iz(x,y) );
             
 
-          //  v_k_new(x,y) = (1/ (4*alpha+ Iy(x,y)*Iy(x,y)) )*(alpha* (v_k(x-1,y)+v_k(x+1,y)+v_k(x,y-1)+v_k(x,y+1)) - Iy(x,y)*Ix(x,y)*u_k(x,y) -Iy(x,y)*Iz(x,y) );
-
-        u_k_new(x,y)= ( ( - (Ix(x,y) * Iz(x,y)) / alpha ) - ( ( Ix(x,y)*Iy(x,y)*v_k(x,y) ) / alpha ) + ( u_k(x+1,y) + u_k(x-1,y) + u_k(x,y+1) + u_k(x,y-1) ) ) / (  4+ (Ix(x,y)*Ix(x,y) )/alpha  );
-
-        v_k_new(x,y) = ( ( - (Iy(x,y) * Iz(x,y)) / alpha ) - ( ( Ix(x,y)*Iy(x,y)*u_k(x,y) ) / alpha ) + ( v_k(x+1,y) + v_k(x-1,y) + v_k(x,y+1) + v_k(x,y-1) ) ) / (  4+ (Iy(x,y)*Iy(x,y) )/alpha   );
+            v_k_new(x,y) = (1/ (4*alpha+ Iy(x,y)*Iy(x,y)) )*(alpha* (v_k(x-1,y)+v_k(x+1,y)+v_k(x,y-1)+v_k(x,y+1)) - Iy(x,y)*Ix(x,y)*u_k(x,y) -Iy(x,y)*Iz(x,y) );
 
         diff_u+= (u_k_new(x,y)-u_k(x,y))*(u_k_new(x,y)-u_k(x,y));
         diff_v+= (v_k_new(x,y)-v_k(x,y))*(v_k_new(x,y)-v_k(x,y));    
@@ -290,10 +287,224 @@ CTensor<float> Horn_SchunkOptFlow(CMatrix<float> image1, CMatrix<float> image2, 
 }
 
 
+
+
+//Gauss-Seidel method
+CTensor<float> GaussSeidelHS(CMatrix<float> image1, CMatrix<float> image2, float alpha, float treshold){
+
+
+         /*Gauss-Seidel method
+            Linear system:
+            Ax=b;  Split A=D+L+U; D-diagonal part of matrix ; L- lower diagonal part; U - upper diagonal part
+            Iterative equation:
+            x(k+1)=D^-1 * (b-L*x(k+1)+U*x(k)) 
+        */
+    
+    
+    int width =image1.xSize();
+    int height=image1.ySize();
+    CTensor<float> result(width,height,2); //u and v optic flow result
+
+    int number_of_pixels=width*height;
+  // apply derivatives
+    CMatrix<float> Ix(width,height);
+    CMatrix<float> Iy(width,height); 
+    diffXY(image1, Ix, Iy);
+
+
+    CMatrix<float> Iz(image2);  
+      for(int x=0; x<width; x++)
+    	for(int y=0;y<height;y++) { 
+        Iz(x,y)-=image1(x,y);
+}
+   
+    //To make computation simpler  and have all matrices of the same size apply Neumann boundary conditions with border size 1 to derivatives and image1
+    image1=Dirichlet_bound(image1,1);
+    Iz=Dirichlet_bound(Iz,1);
+    Ix=Dirichlet_bound(Ix,1);
+    Iy=Dirichlet_bound(Iy,1);    
+    //Horn-Schunck optic flow with Jacoby method
+     //CMatrix<float> u_k(image1);
+     //CMatrix<float> v_k(image1);
+     CMatrix<float> u_k(image1.xSize(),image1.ySize(),1);
+     CMatrix<float> v_k(image1.xSize(),image1.ySize(),1);      
+     CMatrix<float> u_k_new(image1.xSize(),image1.ySize(),0);
+     CMatrix<float> v_k_new(image1.xSize(),image1.ySize(),0);
+     float diff_u,diff_v;
+
+
+   
+                    
+  do{ 
+       diff_u=0;
+       diff_v=0;  
+    for(int x=1; x<image1.xSize()-1; x++)
+    		for(int y=1;y<image1.ySize()-1;y++) {  
+//Gauss-Seidel method
+
+                //Lower triangle (x-1,y) and (x,y-1)
+
+            u_k_new(x,y)= (1 / (4*alpha + Ix(x,y)*Ix(x,y)) ) * ( alpha* (u_k_new(x-1,y)+u_k(x+1,y)+u_k_new(x,y-1)+u_k(x,y+1))  -Ix(x,y)*Iy(x,y)*v_k(x,y) - Ix(x,y)*Iz(x,y) );
+            
+
+            v_k_new(x,y) = (1/ (4*alpha+ Iy(x,y)*Iy(x,y)) )*(alpha* (v_k_new(x-1,y)+v_k(x+1,y)+v_k_new(x,y-1)+v_k(x,y+1)) - Iy(x,y)*Ix(x,y)*u_k_new(x,y) -Iy(x,y)*Iz(x,y) );
+
+        diff_u+= (u_k_new(x,y)-u_k(x,y))*(u_k_new(x,y)-u_k(x,y));
+        diff_v+= (v_k_new(x,y)-v_k(x,y))*(v_k_new(x,y)-v_k(x,y));    
+            
+          
+
+    }
+         u_k=u_k_new;
+         v_k=v_k_new;  
+          diff_u=  diff_u/ number_of_pixels;
+          diff_v=  diff_v/ number_of_pixels;
+         std::cout<<"diff_u "<<diff_u<<"\n";
+         std::cout<<"diff_v "<<diff_v<<"\n";
+} while (diff_u >treshold && diff_v> treshold);
+
+        u_k_new=cut(u_k_new,1);
+        v_k_new=cut(v_k_new,1); 
+
+       result.putMatrix(u_k_new,0);      
+       result.putMatrix(v_k_new,1);      
+
+    return result; 
+
+}
+
+
+//Succesive over-relaxation (SOR)
+CTensor<float> SORHS(CMatrix<float> image1, CMatrix<float> image2, float alpha, float treshold){
+
+
+         /*Succesive over-relaxation method
+            Linear system:
+            Ax=b;  Split A=D+L+U; D-diagonal part of matrix ; L- lower diagonal part; U - upper diagonal part
+            Iterative equation with over-relaxation:
+            x(k+1)= (1-w)*x(k)  + w* D^-1 * (b-L*x(k+1)+U*x(k)) 
+
+            w between 0 and 1
+        */
+    float w = 1.67;
+    
+    int width =image1.xSize();
+    int height=image1.ySize();
+    CTensor<float> result(width,height,2); //u and v optic flow result
+
+    int number_of_pixels=width*height;
+  // apply derivatives
+    CMatrix<float> Ix(width,height);
+    CMatrix<float> Iy(width,height); 
+    diffXY(image1, Ix, Iy);
+
+
+    CMatrix<float> Iz(image2);  
+      for(int x=0; x<width; x++)
+    	for(int y=0;y<height;y++) { 
+        Iz(x,y)-=image1(x,y);
+}
+   
+    //To make computation simpler  and have all matrices of the same size apply Neumann boundary conditions with border size 1 to derivatives and image1
+    image1=Dirichlet_bound(image1,1);
+    Iz=Dirichlet_bound(Iz,1);
+    Ix=Dirichlet_bound(Ix,1);
+    Iy=Dirichlet_bound(Iy,1);    
+    //Horn-Schunck optic flow with Jacoby method
+     //CMatrix<float> u_k(image1);
+     //CMatrix<float> v_k(image1);  
+     CMatrix<float> u_k(image1.xSize(),image1.ySize(),1);
+     CMatrix<float> v_k(image1.xSize(),image1.ySize(),1);       
+     CMatrix<float> u_k_new(image1.xSize(),image1.ySize(),0);
+     CMatrix<float> v_k_new(image1.xSize(),image1.ySize(),0);
+     float diff_u,diff_v;
+
+
+   
+                    
+  do{ 
+       diff_u=0;
+       diff_v=0;  
+    for(int x=1; x<image1.xSize()-1; x++)
+    		for(int y=1;y<image1.ySize()-1;y++) {  
+//Gauss-Seidel method
+
+                //Lower triangle (x-1,y) and (x,y-1)
+
+            u_k_new(x,y)=(1-w)*u_k(x,y)+ w * (1 / (4*alpha + Ix(x,y)*Ix(x,y)) ) * ( alpha* (u_k_new(x-1,y)+u_k(x+1,y)+u_k_new(x,y-1)+u_k(x,y+1))  -Ix(x,y)*Iy(x,y)*v_k(x,y) - Ix(x,y)*Iz(x,y) );
+            
+
+            v_k_new(x,y) =(1-w)*v_k(x,y)+ w * (1/ (4*alpha+ Iy(x,y)*Iy(x,y)) )*(alpha* (v_k_new(x-1,y)+v_k(x+1,y)+v_k_new(x,y-1)+v_k(x,y+1)) - Iy(x,y)*Ix(x,y)*u_k_new(x,y) -Iy(x,y)*Iz(x,y) );
+
+        diff_u+= (u_k_new(x,y)-u_k(x,y))*(u_k_new(x,y)-u_k(x,y));
+        diff_v+= (v_k_new(x,y)-v_k(x,y))*(v_k_new(x,y)-v_k(x,y));    
+            
+          
+
+    }
+         u_k=u_k_new;
+         v_k=v_k_new;  
+          diff_u=  diff_u/ number_of_pixels;
+          diff_v=  diff_v/ number_of_pixels;
+            std::cout<<"diff_u "<< diff_u<<"\n";
+            std::cout<<"diff_v "<< diff_v<<"\n";
+} while (diff_u >treshold && diff_v> treshold);
+
+        u_k_new=cut(u_k_new,1);
+        v_k_new=cut(v_k_new,1); 
+
+       result.putMatrix(u_k_new,0);      
+       result.putMatrix(v_k_new,1);      
+
+    return result; 
+
+}
+
+
+CTensor<float> Horn_SchunkOptFlow(CMatrix<float> image1, CMatrix<float> image2, int sigma, bool presmoothing, float alpha, float treshold, int method_choice){
+    
+    int width =image1.xSize();
+    int height=image1.ySize();
+   // int number_of_pixels=width*height;
+
+    CTensor<float> result(width,height,2); //u and v optic flow result
+    int border_size=3*sigma;
+    CMatrix<float> kernel;
+
+       
+    if(sigma>0){
+      kernel=Gauss(sigma);//create Gauss kernel
+        //Pre-smooth  image with Gauss kernel if presmoothing is true
+        if(presmoothing==true){
+        //apply Neumann boundary condition 
+        image1=Neumann_bound(image1,border_size);
+	    image2=Neumann_bound(image2,border_size); 
+        //Pre-smoothing initial images
+        image1=Gfilter(kernel, image1, border_size);
+        image2=Gfilter(kernel, image2, border_size);
+        image1=cut(image1, border_size);
+        image2=cut(image2, border_size);    
+        }
+    }
+
+
+    if(method_choice==method::Jacoby){
+        result=JacobyHS(image1, image2,  alpha,  treshold);
+    }else if(method_choice==method::Gauss_Seidel){
+        result=GaussSeidelHS( image1,  image2,  alpha,  treshold);
+    }else if(method_choice==method::SOR){
+        result = SORHS( image1, image2,  alpha,  treshold);
+    }
+return result;
+  
+}
+
+
 int main(int argc, char** argv) {  
 
 
     std::string folderNameInput;
+
 	int sigma=1;
 
 
@@ -311,13 +522,26 @@ int main(int argc, char** argv) {
 		std::cout<<"The command should contain at least input file name. The default Gauss kernel sigma=1."<<"\n";
 		return 0;    
 	}
+    
 
+    int method_choice;
+
+    std::cout<<"Choose solver: [1] - Jacoby; [2] - Gauss-Seidel; [3] - SOR "<<"\n";
+    std::cin>>method_choice;
+    if(method_choice ==1 || method_choice==2 || method_choice==3 ){
+        std::cout<<"Processing..."<<"\n";
+    }else{
+         std::cout<<"Wrong input! By default activated  Jacoby solver"<<"\n";
+         method_choice=method::Jacoby;
+
+    }
 
     CVector<CMatrix<float> > seq;
     
     //seq = loadSequence("resources/cropped-street/t.txt");
-    //seq = loadSequence("resources/yos/t.txt");
-   seq = loadSequence("resources/gsalesman/t.txt");
+ //   seq = loadSequence("resources/yos/t.txt");
+    seq = loadSequence("resources/bamboo_2gray/t.txt");
+   //seq = loadSequence("resources/gsalesman/t.txt");
       CMatrix<float> img1;
       CMatrix<float> img2;
       bool presmoothing=false;
@@ -330,9 +554,9 @@ int main(int argc, char** argv) {
         opticFlow(img1.xSize(),img1.ySize(),2);
 
       float alpha = 400;
-      float treshold= 0.00000000000001;
-
-        opticFlow=Horn_SchunkOptFlow(img1 ,img2, sigma,  presmoothing, alpha,  treshold);
+      //float treshold= 0.0000000000001;
+      float treshold= 0.0000001;
+        opticFlow=Horn_SchunkOptFlow(img1 ,img2, sigma,  presmoothing, alpha,  treshold, method_choice);
 
     CTensor<float> Horn_SchunkFlowRGB(img1.xSize(), img1.ySize(),3);
 

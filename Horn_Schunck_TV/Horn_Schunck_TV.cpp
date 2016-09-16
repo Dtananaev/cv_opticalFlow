@@ -305,10 +305,11 @@ CTensor<float> JacobyHSTV(CMatrix<float> image1, CMatrix<float> image2, float al
 }
    
     //To make computation simpler  and have all matrices of the same size apply Dirichlet boundary conditions with border size 1 to derivatives and image1
-    image1=Dirichlet_bound(image1,1);
-    Iz=Dirichlet_bound(Iz,1);
-    Ix=Dirichlet_bound(Ix,1);
-    Iy=Dirichlet_bound(Iy,1);    
+    int boundary=3;
+    image1=Neumann_bound(image1,boundary);
+    Iz=Neumann_bound(Iz,boundary);
+    Ix=Neumann_bound(Ix,boundary);
+    Iy=Neumann_bound(Iy,boundary);    
     //Horn-Schunck optic flow with Jacoby method
      CMatrix<float> u_k(image1);
      CMatrix<float> v_k(image1); 
@@ -324,8 +325,8 @@ bool flag =false;
   do{ 
        diff_u=0;
        diff_v=0;  
-    for(int x=1; x<image1.xSize()-1; x++)
-    		for(int y=1;y<image1.ySize()-1;y++) {  
+    for(int x=boundary; x<image1.xSize()-boundary; x++)
+    		for(int y=boundary;y<image1.ySize()-boundary;y++) {  
         
 
 
@@ -468,8 +469,8 @@ bool flag =false;
          std::cout<<"counter "<<counter<<"\n";
 } while ( diff_u >treshold && diff_v> treshold );
 
-        u_k_new=cut(u_k_new,1);
-        v_k_new=cut(v_k_new,1); 
+        u_k_new=cut(u_k_new,boundary);
+        v_k_new=cut(v_k_new,boundary); 
 
        result.putMatrix(u_k_new,0);      
        result.putMatrix(v_k_new,1);      
@@ -510,15 +511,16 @@ CTensor<float> GaussSeidelHSTV(CMatrix<float> image1, CMatrix<float> image2, flo
 }
    
       //To make computation simpler  and have all matrices of the same size apply Dirichlet boundary conditions with border size 1 to derivatives and image1
-    image1=Dirichlet_bound(image1,1);
-    Iz=Dirichlet_bound(Iz,1);
-    Ix=Dirichlet_bound(Ix,1);
-    Iy=Dirichlet_bound(Iy,1);    
+    int boundary=3;
+    image1=Neumann_bound(image1,boundary);
+    Iz=Neumann_bound(Iz,boundary);
+    Ix=Neumann_bound(Ix,boundary);
+    Iy=Neumann_bound(Iy,boundary);    
     //Horn-Schunck optic flow with Jacoby method
      CMatrix<float> u_k(image1);
      CMatrix<float> v_k(image1); 
-   //  CMatrix<float> u_k(image1.xSize(),image1.ySize(),0);
-   //  CMatrix<float> v_k(image1.xSize(),image1.ySize(),0);     
+    // CMatrix<float> u_k(image1.xSize(),image1.ySize(),0);
+     //CMatrix<float> v_k(image1.xSize(),image1.ySize(),0);     
      CMatrix<float> u_k_new(image1.xSize(),image1.ySize(),0);
      CMatrix<float> v_k_new(image1.xSize(),image1.ySize(),0);
      float diff_u,diff_v;
@@ -529,8 +531,8 @@ bool flag =false;
   do{ 
        diff_u=0;
        diff_v=0;  
-    for(int x=1; x<image1.xSize()-1; x++)
-    		for(int y=1;y<image1.ySize()-1;y++) {  
+    for(int x=boundary; x<image1.xSize()-boundary; x++)
+    		for(int y=boundary;y<image1.ySize()-boundary;y++) {  
         
 
 
@@ -665,6 +667,8 @@ bool flag =false;
  
          u_k=u_k_new;
          v_k=v_k_new;  
+      
+    
           diff_u=  diff_u/ number_of_pixels;
           diff_v=  diff_v/ number_of_pixels;
         std::cout<<"diff_u "<<diff_u<<"\n";
@@ -675,8 +679,8 @@ bool flag =false;
 
 } while ( diff_u >treshold && diff_v> treshold);
 
-        u_k_new=cut(u_k_new,1);
-        v_k_new=cut(v_k_new,1); 
+        u_k_new=cut(u_k_new,boundary);
+        v_k_new=cut(v_k_new,boundary); 
 
        result.putMatrix(u_k_new,0);      
        result.putMatrix(v_k_new,1);      
@@ -718,15 +722,17 @@ CTensor<float> SORHSTV(CMatrix<float> image1, CMatrix<float> image2, float alpha
 }
    
      //To make computation simpler  and have all matrices of the same size apply Dirichlet boundary conditions with border size 1 to derivatives and image1
-    image1=Dirichlet_bound(image1,1);
-    Iz=Dirichlet_bound(Iz,1);
-    Ix=Dirichlet_bound(Ix,1);
-    Iy=Dirichlet_bound(Iy,1);    
+    int boundary=3;
+
+    image1=Dirichlet_bound(image1,boundary);
+    Iz=Dirichlet_bound(Iz,boundary);
+    Ix=Dirichlet_bound(Ix,boundary);
+    Iy=Dirichlet_bound(Iy,boundary);    
     //Horn-Schunck optic flow with Jacoby method
      CMatrix<float> u_k(image1);
      CMatrix<float> v_k(image1); 
-   //  CMatrix<float> u_k(image1.xSize(),image1.ySize(),0);
-   //  CMatrix<float> v_k(image1.xSize(),image1.ySize(),0);     
+    // CMatrix<float> u_k(image1.xSize(),image1.ySize(),0);
+    // CMatrix<float> v_k(image1.xSize(),image1.ySize(),0);     
      CMatrix<float> u_k_new(image1.xSize(),image1.ySize(),0);
      CMatrix<float> v_k_new(image1.xSize(),image1.ySize(),0);
      float diff_u,diff_v;
@@ -737,8 +743,8 @@ bool flag =false;
   do{ 
        diff_u=0;
        diff_v=0;  
-    for(int x=1; x<image1.xSize()-1; x++)
-    		for(int y=1;y<image1.ySize()-1;y++) {  
+    for(int x=boundary; x<image1.xSize()-boundary; x++)
+    		for(int y=boundary;y<image1.ySize()-boundary;y++) {  
         
 
 
@@ -882,8 +888,8 @@ bool flag =false;
          std::cout<<"counter "<<counter<<"\n";
 } while ( diff_u >treshold && diff_v> treshold);
 
-        u_k_new=cut(u_k_new,1);
-        v_k_new=cut(v_k_new,1); 
+        u_k_new=cut(u_k_new,boundary);
+        v_k_new=cut(v_k_new,boundary); 
 
        result.putMatrix(u_k_new,0);      
        result.putMatrix(v_k_new,1);      
@@ -972,11 +978,11 @@ int main(int argc, char** argv) {
     CVector<CMatrix<float> > seq;
     
     //seq = loadSequence("resources/cropped-street/t.txt");
-    //seq = loadSequence("resources/yos/t.txt");
-   seq = loadSequence("resources/gsalesman/t.txt");
+    seq = loadSequence("resources/yos/t.txt");
+   //seq = loadSequence("resources/gsalesman/t.txt");
       CMatrix<float> img1;
       CMatrix<float> img2;
-      bool presmoothing=false;
+      bool presmoothing=true;
        CTensor<float> opticFlow;
 
     for (int i = 0; i < seq.size()-1; ++i){
@@ -985,8 +991,8 @@ int main(int argc, char** argv) {
 	    img2 = seq(i+1);
         opticFlow(img1.xSize(),img1.ySize(),2);
 
-      float alpha = 60;
-      float treshold= 0.000001;
+      float alpha = 100;
+      float treshold= 0.0000001;
    //float treshold= 1;
         opticFlow=Horn_SchunkOptFlow(img1 ,img2, sigma,  presmoothing, alpha,  treshold, method_choice);
 

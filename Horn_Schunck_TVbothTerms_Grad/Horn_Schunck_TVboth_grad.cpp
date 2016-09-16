@@ -275,9 +275,9 @@ void calculateTV(int x,int y, CMatrix<float> u_k,CMatrix<float> v_k, float& g_1,
 }
 
 //Jacoby method Horn-Schunck with TV smoothsness term
-CTensor<float> JacobyHSTV(CMatrix<float> image1, CMatrix<float> image2, float alpha, float treshold){
+CTensor<float> JacobyHSTV(CMatrix<float> image1, CMatrix<float> image2, float alpha, float treshold, float gamma){
 
-    float e = 0.001; // TV regularizer
+    float e = 0.0001; // TV regularizer
 
     int counter =0;
          /*Jacoby method
@@ -305,17 +305,33 @@ CTensor<float> JacobyHSTV(CMatrix<float> image1, CMatrix<float> image2, float al
     	for(int y=0;y<height;y++) { 
         Iz(x,y)-=image1(x,y);
 }
-   
+
+//apply second derivative
+    CMatrix<float> Ixx(width,height);
+    CMatrix<float> Iyy(width,height);    
+    CMatrix<float> Ixy(width,height);
+    CMatrix<float> Iyz(width,height); 
+    CMatrix<float> Ixz(width,height); 
+    diffXY(Ix, Ixx, Ixy);
+    diffXY(Iy, Ixy, Iyy);
+    diffXY(Iz, Ixz, Iyz);
+
     //To make computation simpler  and have all matrices of the same size apply Dirichlet boundary conditions with border size 1 to derivatives and image1
-    int boundary=3;
-    image1=Dirichlet_bound(image1,boundary);
-    Iz=Dirichlet_bound(Iz,boundary);
-    Ix=Dirichlet_bound(Ix,boundary);
-    Iy=Dirichlet_bound(Iy,boundary);    
+
+    int border=3;
+    image1=Neumann_bound(image1,border);
+    Iz=Neumann_bound(Iz,border);
+    Ix=Neumann_bound(Ix,border);
+    Iy=Neumann_bound(Iy,border);   
+    Ixz=Neumann_bound(Ixz,border);
+    Iyz=Neumann_bound(Iyz,border);
+    Ixx=Neumann_bound(Ixx,border);
+    Ixy=Neumann_bound(Ixy,border);  
+    Iyy=Neumann_bound(Iyy,border); 
     //Horn-Schunck optic flow with Jacoby method
      CMatrix<float> u_k(image1);
-     CMatrix<float> v_k(image1); 
-    // CMatrix<float> u_k(image1.xSize(),image1.ySize(),1);
+     CMatrix<float> v_k(image1);
+   // CMatrix<float> u_k(image1.xSize(),image1.ySize(),1);
     // CMatrix<float> v_k(image1.xSize(),image1.ySize(),1);     
      CMatrix<float> u_k_new(image1.xSize(),image1.ySize(),0);
      CMatrix<float> v_k_new(image1.xSize(),image1.ySize(),0);
@@ -327,8 +343,8 @@ bool flag =false;
   do{ 
        diff_u=0;
        diff_v=0;  
-    for(int x=boundary; x<image1.xSize()-boundary; x++)
-    		for(int y=boundary;y<image1.ySize()-boundary;y++) {  
+    for(int x=border; x<image1.xSize()-border; x++)
+    		for(int y=border;y<image1.ySize()-border;y++) {  
         
 
 
@@ -438,6 +454,12 @@ bool flag =false;
 
         float C=1/sqrt( (Ix(x,y)*u_k(x,y) + Iy(x,y)*v_k(x,y) + Iz(x,y))*(Ix(x,y)*u_k(x,y) + Iy(x,y)*v_k(x,y) + Iz(x,y)) +e*e );
 
+//Now calculate the gradient value constancy assumption
+
+      float gradC=gamma*1/sqrt(  pow( (Ixx(x,y)*u_k(x,y) + Ixy(x,y)* v_k(x,y) + Ixz(x,y)),2) +  pow( (Ixy(x,y)*u_k(x,y) + Iyy(x,y)* v_k(x,y) + Iyz(x,y)),2) + e*e  );
+
+
+
     //Jacoby linear solver for Optic flow
 
     /* Discretized form of the Horn-Schunk optic flow with TV diffusion for smoothness term 
@@ -453,10 +475,10 @@ bool flag =false;
 
 
 
-            u_k_new(x,y)= (1 / ((g_1+g_2+g_3+g_4)*alpha + C*Ix(x,y)*Ix(x,y)) ) * ( alpha* (g_2*u_k(x-1,y)+g_1*u_k(x+1,y)+g_4*u_k(x,y-1)+g_3*u_k(x,y+1))  -C*Ix(x,y)*Iy(x,y)*v_k(x,y) - C*Ix(x,y)*Iz(x,y) );
+            u_k_new(x,y)= (1 / ((g_1+g_2+g_3+g_4)*alpha + C*Ix(x,y)*Ix(x,y) + gradC*(Ixx(x,y)*Ixx(x,y)+Ixy(x,y)*Ixy(x,y)) ) ) * ( alpha* (g_2*u_k(x-1,y)+g_1*u_k(x+1,y)+g_4*u_k(x,y-1)+g_3*u_k(x,y+1))  -C*Ix(x,y)*Iy(x,y)*v_k(x,y) - C*Ix(x,y)*Iz(x,y) - gradC*v_k(x,y)*(Ixx(x,y)*Ixy(x,y)+ Iyy(x,y)*Ixy(x,y)) -gradC*(Ixz(x,y)*Ixx(x,y)+Iyz(x,y)*Ixy(x,y) )  );
             
 
-            v_k_new(x,y) = (1/ ((g_1+g_2+g_3+g_4)*alpha+ C*Iy(x,y)*Iy(x,y)) )*(alpha* (g_2*v_k(x-1,y)+g_1*v_k(x+1,y)+g_4*v_k(x,y-1)+g_3*v_k(x,y+1)) - C*Iy(x,y)*Ix(x,y)*u_k(x,y) -C*Iy(x,y)*Iz(x,y) );
+            v_k_new(x,y) = (1/ ((g_1+g_2+g_3+g_4)*alpha+ C*Iy(x,y)*Iy(x,y) + gradC*(Iyy(x,y)*Iyy(x,y)+Ixy(x,y)*Ixy(x,y))    ) )*(alpha* (g_2*v_k(x-1,y)+g_1*v_k(x+1,y)+g_4*v_k(x,y-1)+g_3*v_k(x,y+1)) - C*Iy(x,y)*Ix(x,y)*u_k(x,y) -C*Iy(x,y)*Iz(x,y)    - gradC*u_k(x,y)*(Ixx(x,y)*Ixy(x,y)+ Iyy(x,y)*Ixy(x,y)) -gradC*(Ixz(x,y)*Ixy(x,y)+Iyz(x,y)*Iyy(x,y)  ) );
 
         diff_u+= (u_k_new(x,y)-u_k(x,y))*(u_k_new(x,y)-u_k(x,y));
         diff_v+= (v_k_new(x,y)-v_k(x,y))*(v_k_new(x,y)-v_k(x,y));    
@@ -467,6 +489,7 @@ bool flag =false;
  
          u_k=u_k_new;
          v_k=v_k_new;  
+
           diff_u=  diff_u/ number_of_pixels;
           diff_v=  diff_v/ number_of_pixels;
         std::cout<<"diff_u "<<diff_u<<"\n";
@@ -476,8 +499,8 @@ bool flag =false;
         if(counter>=5000){break;}
 } while ( diff_u >treshold && diff_v> treshold );
 
-        u_k_new=cut(u_k_new,boundary);
-        v_k_new=cut(v_k_new,boundary); 
+        u_k_new=cut(u_k_new,border);
+        v_k_new=cut(v_k_new,border); 
 
        result.putMatrix(u_k_new,0);      
        result.putMatrix(v_k_new,1);      
@@ -489,9 +512,9 @@ bool flag =false;
 
 
 //Gauss-Seidel method
-CTensor<float> GaussSeidelHSTV(CMatrix<float> image1, CMatrix<float> image2, float alpha, float treshold){
+CTensor<float> GaussSeidelHSTV(CMatrix<float> image1, CMatrix<float> image2, float alpha, float treshold, float gamma){
     int counter=0;
-  float e = 0.001; // TV regularizer
+  float e = 0.0001; // TV regularizer
          /*Gauss-Seidel method
             Linear system:
             Ax=b;  Split A=D+L+U; D-diagonal part of matrix ; L- lower diagonal part; U - upper diagonal part
@@ -505,7 +528,7 @@ CTensor<float> GaussSeidelHSTV(CMatrix<float> image1, CMatrix<float> image2, flo
     CTensor<float> result(width,height,2); //u and v optic flow result
 
     int number_of_pixels=width*height;
-  // apply derivatives
+ // apply derivatives
     CMatrix<float> Ix(width,height);
     CMatrix<float> Iy(width,height); 
     diffXY(image1, Ix, Iy);
@@ -516,18 +539,34 @@ CTensor<float> GaussSeidelHSTV(CMatrix<float> image1, CMatrix<float> image2, flo
     	for(int y=0;y<height;y++) { 
         Iz(x,y)-=image1(x,y);
 }
-   
-      //To make computation simpler  and have all matrices of the same size apply Dirichlet boundary conditions with border size 1 to derivatives and image1
-    int boundary=3;
-    image1=Dirichlet_bound(image1,boundary);
-    Iz=Dirichlet_bound(Iz,boundary);
-    Ix=Dirichlet_bound(Ix,boundary);
-    Iy=Dirichlet_bound(Iy,boundary);    
+
+//apply second derivative
+    CMatrix<float> Ixx(width,height);
+    CMatrix<float> Iyy(width,height);    
+    CMatrix<float> Ixy(width,height);
+    CMatrix<float> Iyz(width,height); 
+    CMatrix<float> Ixz(width,height); 
+    diffXY(Ix, Ixx, Ixy);
+    diffXY(Iy, Ixy, Iyy);
+    diffXY(Iz, Ixz, Iyz);
+
+    //To make computation simpler  and have all matrices of the same size apply Dirichlet boundary conditions with border size 1 to derivatives and image1
+    int border=3;
+    image1=Neumann_bound(image1,border);
+    Iz=Neumann_bound(Iz,border);
+    Ix=Neumann_bound(Ix,border);
+    Iy=Neumann_bound(Iy,border); 
+  
+    Ixz=Neumann_bound(Ixz,border);
+    Iyz=Neumann_bound(Iyz,border);
+    Ixx=Neumann_bound(Ixx,border);
+    Ixy=Neumann_bound(Ixy,border);  
+    Iyy=Neumann_bound(Iyy,border);
     //Horn-Schunck optic flow with Jacoby method
      CMatrix<float> u_k(image1);
      CMatrix<float> v_k(image1); 
-    // CMatrix<float> u_k(image1.xSize(),image1.ySize(),1);
-    // CMatrix<float> v_k(image1.xSize(),image1.ySize(),1);     
+    // CMatrix<float> u_k(image1.xSize(),image1.ySize(),100);
+    // CMatrix<float> v_k(image1.xSize(),image1.ySize(),100);     
      CMatrix<float> u_k_new(image1.xSize(),image1.ySize(),0);
      CMatrix<float> v_k_new(image1.xSize(),image1.ySize(),0);
      float diff_u,diff_v;
@@ -538,8 +577,8 @@ bool flag =false;
   do{ 
        diff_u=0;
        diff_v=0;  
-    for(int x=boundary; x<image1.xSize()-boundary; x++)
-    		for(int y=boundary;y<image1.ySize()-boundary;y++) {  
+    for(int x=border; x<image1.xSize()-border; x++)
+    		for(int y=border;y<image1.ySize()-border;y++) {  
         
 
 
@@ -574,11 +613,10 @@ bool flag =false;
 
         g_1=g_2=g_3=g_4=1;
 
+
         flag=true;
 }else{
 
-
-  
 
 /*
         g_1 = 0.5* (A + B )
@@ -645,9 +683,19 @@ bool flag =false;
 }
         //calculateTV( x, y, u_k, v_k,g_1, g_2,  g_3,  g_4 );
 
-        // first term nonlinearity
+
+
+// Now calculate the gray value cosntacy assumption nonlinearity
+
         float C=1/sqrt( (Ix(x,y)*u_k(x,y) + Iy(x,y)*v_k(x,y) + Iz(x,y))*(Ix(x,y)*u_k(x,y) + Iy(x,y)*v_k(x,y) + Iz(x,y)) +e*e );
-    //Gauus-Seidel linear solver for Optic flow
+
+//Now calculate the gradient value constancy assumption
+
+      float gradC=gamma*1/sqrt(  pow( (Ixx(x,y)*u_k(x,y) + Ixy(x,y)* v_k(x,y) + Ixz(x,y)),2) +  pow( (Ixy(x,y)*u_k(x,y) + Iyy(x,y)* v_k(x,y) + Iyz(x,y)),2) + e*e  );
+
+
+
+    //Jacoby linear solver for Optic flow
 
     /* Discretized form of the Horn-Schunk optic flow with TV diffusion for smoothness term 
 
@@ -662,10 +710,10 @@ bool flag =false;
 
 
 
-            u_k_new(x,y)= (1 / ((g_1+g_2+g_3+g_4)*alpha + C*Ix(x,y)*Ix(x,y)) ) * ( alpha* (g_2*u_k_new(x-1,y)+g_1*u_k(x+1,y)+g_4*u_k_new(x,y-1)+g_3*u_k(x,y+1))  -C*Ix(x,y)*Iy(x,y)*v_k(x,y) - C*Ix(x,y)*Iz(x,y) );
+            u_k_new(x,y)= (1 / ((g_1+g_2+g_3+g_4)*alpha + C*Ix(x,y)*Ix(x,y) + gradC*(Ixx(x,y)*Ixx(x,y)+Ixy(x,y)*Ixy(x,y)) ) ) * ( alpha* (g_2*u_k_new(x-1,y)+g_1*u_k(x+1,y)+g_4*u_k_new(x,y-1)+g_3*u_k(x,y+1))  -C*Ix(x,y)*Iy(x,y)*v_k(x,y) - C*Ix(x,y)*Iz(x,y) - gradC*v_k(x,y)*(Ixx(x,y)*Ixy(x,y)+ Iyy(x,y)*Ixy(x,y)) -gradC*(Ixz(x,y)*Ixx(x,y)+Iyz(x,y)*Ixy(x,y) )  );
             
 
-            v_k_new(x,y) = (1/ ((g_1+g_2+g_3+g_4)*alpha+ C*Iy(x,y)*Iy(x,y)) )*(alpha* (g_2*v_k_new(x-1,y)+g_1*v_k(x+1,y)+g_4*v_k_new(x,y-1)+g_3*v_k(x,y+1)) -C*Iy(x,y)*Ix(x,y)*u_k_new(x,y) -C*Iy(x,y)*Iz(x,y) );
+            v_k_new(x,y) = (1/ ((g_1+g_2+g_3+g_4)*alpha+ C*Iy(x,y)*Iy(x,y) + gradC*(Iyy(x,y)*Iyy(x,y)+Ixy(x,y)*Ixy(x,y))    ) )*(alpha* (g_2*v_k_new(x-1,y)+g_1*v_k(x+1,y)+g_4*v_k_new(x,y-1)+g_3*v_k(x,y+1)) - C*Iy(x,y)*Ix(x,y)*u_k_new(x,y) -C*Iy(x,y)*Iz(x,y)    - gradC*u_k_new(x,y)*(Ixx(x,y)*Ixy(x,y)+ Iyy(x,y)*Ixy(x,y)) -gradC*(Ixz(x,y)*Ixy(x,y)+Iyz(x,y)*Iyy(x,y)  ) );
 
         diff_u+= (u_k_new(x,y)-u_k(x,y))*(u_k_new(x,y)-u_k(x,y));
         diff_v+= (v_k_new(x,y)-v_k(x,y))*(v_k_new(x,y)-v_k(x,y));    
@@ -676,30 +724,30 @@ bool flag =false;
  
          u_k=u_k_new;
          v_k=v_k_new;  
+
+
           diff_u=  diff_u/ number_of_pixels;
           diff_v=  diff_v/ number_of_pixels;
         std::cout<<"diff_u "<<diff_u<<"\n";
          std::cout<<"diff_v "<<diff_v<<"\n";
         counter+=1;
-        std::cout<<"counter "<<counter<<"\n";
+         std::cout<<"counter "<<counter<<"\n";
         if(counter>=5000){break;}
+} while ( diff_u >treshold && diff_v> treshold );
 
-} while ( diff_u >treshold && diff_v> treshold);
-
-        u_k_new=cut(u_k_new,boundary);
-        v_k_new=cut(v_k_new,boundary); 
+        u_k_new=cut(u_k_new,border);
+        v_k_new=cut(v_k_new,border); 
 
        result.putMatrix(u_k_new,0);      
        result.putMatrix(v_k_new,1);      
 
     return result; 
-
 }
 
 
 //Succesive over-relaxation (SOR)
-CTensor<float> SORHSTV(CMatrix<float> image1, CMatrix<float> image2, float alpha, float treshold){
-  float e = 0.001; // TV regularizer
+CTensor<float> SORHSTV(CMatrix<float> image1, CMatrix<float> image2, float alpha, float treshold, float gamma){
+  float e = 0.0001; // TV regularizer
 
          /*Succesive over-relaxation method
             Linear system:
@@ -727,18 +775,35 @@ CTensor<float> SORHSTV(CMatrix<float> image1, CMatrix<float> image2, float alpha
     	for(int y=0;y<height;y++) { 
         Iz(x,y)-=image1(x,y);
 }
-   
-     //To make computation simpler  and have all matrices of the same size apply Dirichlet boundary conditions with border size 1 to derivatives and image1
-    int boundary=3;
-    image1=Dirichlet_bound(image1,boundary);
-    Iz=Dirichlet_bound(Iz,boundary);
-    Ix=Dirichlet_bound(Ix,boundary);
-    Iy=Dirichlet_bound(Iy,boundary);    
+
+//apply second derivative
+    CMatrix<float> Ixx(width,height);
+    CMatrix<float> Iyy(width,height);    
+    CMatrix<float> Ixy(width,height);
+    CMatrix<float> Iyz(width,height); 
+    CMatrix<float> Ixz(width,height); 
+    diffXY(Ix, Ixx, Ixy);
+    diffXY(Iy, Ixy, Iyy);
+    diffXY(Iz, Ixz, Iyz);
+
+    //To make computation simpler  and have all matrices of the same size apply Dirichlet boundary conditions with border size 1 to derivatives and image1
+
+    int border=3;
+    image1=Neumann_bound(image1,border);
+    Iz=Neumann_bound(Iz,border);
+    Ix=Neumann_bound(Ix,border);
+    Iy=Neumann_bound(Iy,border); 
+  
+    Ixz=Neumann_bound(Ixz,border);
+    Iyz=Neumann_bound(Iyz,border);
+    Ixx=Neumann_bound(Ixx,border);
+    Ixy=Neumann_bound(Ixy,border);  
+    Iyy=Neumann_bound(Iyy,border);
     //Horn-Schunck optic flow with Jacoby method
      CMatrix<float> u_k(image1);
-     CMatrix<float> v_k(image1); 
-   //  CMatrix<float> u_k(image1.xSize(),image1.ySize(),0);
-   //  CMatrix<float> v_k(image1.xSize(),image1.ySize(),0);     
+     CMatrix<float> v_k(image1);
+   //  CMatrix<float> u_k(image1.xSize(),image1.ySize(),1);
+    // CMatrix<float> v_k(image1.xSize(),image1.ySize(),1);     
      CMatrix<float> u_k_new(image1.xSize(),image1.ySize(),0);
      CMatrix<float> v_k_new(image1.xSize(),image1.ySize(),0);
      float diff_u,diff_v;
@@ -749,10 +814,9 @@ bool flag =false;
   do{ 
        diff_u=0;
        diff_v=0;  
-    for(int x=boundary; x<image1.xSize()-boundary; x++)
-    		for(int y=boundary;y<image1.ySize()-boundary;y++) {  
+    for(int x=border; x<image1.xSize()-border; x++)
+    		for(int y=border;y<image1.ySize()-border;y++) {  
         
-
 
         //Lagged diffusivity scheme: First calculate the nonlinear part which is TV diffusion
          /*    
@@ -785,11 +849,9 @@ bool flag =false;
 
         g_1=g_2=g_3=g_4=1;
 
-        flag=true;
+       flag=true;
 }else{
 
-
-  
 
 /*
         g_1 = 0.5* (A + B )
@@ -797,6 +859,7 @@ bool flag =false;
         g_3 = 0.5* (A + D )   
         g_4 = 0.5* (A + E ) 
 */
+    
    //Calculating A  = g(x,y)    
 
     
@@ -855,10 +918,20 @@ bool flag =false;
 
 }
         //calculateTV( x, y, u_k, v_k,g_1, g_2,  g_3,  g_4 );
-//first term TV
+
+
+
+// Now calculate the gray value cosntacy assumption nonlinearity
+
         float C=1/sqrt( (Ix(x,y)*u_k(x,y) + Iy(x,y)*v_k(x,y) + Iz(x,y))*(Ix(x,y)*u_k(x,y) + Iy(x,y)*v_k(x,y) + Iz(x,y)) +e*e );
 
-    //SOR linear solver for Optic flow
+//Now calculate the gradient value constancy assumption
+
+      float gradC=gamma*1/sqrt(  pow( (Ixx(x,y)*u_k(x,y) + Ixy(x,y)* v_k(x,y) + Ixz(x,y)),2) +  pow( (Ixy(x,y)*u_k(x,y) + Iyy(x,y)* v_k(x,y) + Iyz(x,y)),2) + e*e  );
+
+
+
+    //Jacoby linear solver for Optic flow
 
     /* Discretized form of the Horn-Schunk optic flow with TV diffusion for smoothness term 
 
@@ -873,10 +946,10 @@ bool flag =false;
 
 
 
-            u_k_new(x,y)=(1-w)*u_k(x,y) + w* (1 / ((g_1+g_2+g_3+g_4)*alpha +C* Ix(x,y)*Ix(x,y)) ) * ( alpha* (g_2*u_k_new(x-1,y)+g_1*u_k(x+1,y)+g_4*u_k_new(x,y-1)+g_3*u_k(x,y+1))  -C*Ix(x,y)*Iy(x,y)*v_k(x,y) - C*Ix(x,y)*Iz(x,y) );
+            u_k_new(x,y)=(1-w)*u_k(x,y)+ w* (1 / ((g_1+g_2+g_3+g_4)*alpha + C*Ix(x,y)*Ix(x,y) + gradC*(Ixx(x,y)*Ixx(x,y)+Ixy(x,y)*Ixy(x,y)) ) ) * ( alpha* (g_2*u_k_new(x-1,y)+g_1*u_k(x+1,y)+g_4*u_k_new(x,y-1)+g_3*u_k(x,y+1))  -C*Ix(x,y)*Iy(x,y)*v_k(x,y) - C*Ix(x,y)*Iz(x,y) - gradC*v_k(x,y)*(Ixx(x,y)*Ixy(x,y)+ Iyy(x,y)*Ixy(x,y)) -gradC*(Ixz(x,y)*Ixx(x,y)+Iyz(x,y)*Ixy(x,y) )  );
             
 
-            v_k_new(x,y) = (1-w)*v_k(x,y) + w* (1/ ((g_1+g_2+g_3+g_4)*alpha+ C*Iy(x,y)*Iy(x,y)) )*(alpha* (g_2*v_k_new(x-1,y)+g_1*v_k(x+1,y)+g_4*v_k_new(x,y-1)+g_3*v_k(x,y+1)) -C* Iy(x,y)*Ix(x,y)*u_k_new(x,y) -C*Iy(x,y)*Iz(x,y) );
+            v_k_new(x,y) = (1-w)*v_k(x,y)+ w*(1/ ((g_1+g_2+g_3+g_4)*alpha+ C*Iy(x,y)*Iy(x,y) + gradC*(Iyy(x,y)*Iyy(x,y)+Ixy(x,y)*Ixy(x,y))    ) )*(alpha* (g_2*v_k_new(x-1,y)+g_1*v_k(x+1,y)+g_4*v_k_new(x,y-1)+g_3*v_k(x,y+1)) - C*Iy(x,y)*Ix(x,y)*u_k_new(x,y) -C*Iy(x,y)*Iz(x,y)    - gradC*u_k_new(x,y)*(Ixx(x,y)*Ixy(x,y)+ Iyy(x,y)*Ixy(x,y)) -gradC*(Ixz(x,y)*Ixy(x,y)+Iyz(x,y)*Iyy(x,y)  ) );
 
         diff_u+= (u_k_new(x,y)-u_k(x,y))*(u_k_new(x,y)-u_k(x,y));
         diff_v+= (v_k_new(x,y)-v_k(x,y))*(v_k_new(x,y)-v_k(x,y));    
@@ -887,18 +960,18 @@ bool flag =false;
  
          u_k=u_k_new;
          v_k=v_k_new;  
+
           diff_u=  diff_u/ number_of_pixels;
           diff_v=  diff_v/ number_of_pixels;
         std::cout<<"diff_u "<<diff_u<<"\n";
          std::cout<<"diff_v "<<diff_v<<"\n";
-
         counter+=1;
          std::cout<<"counter "<<counter<<"\n";
         if(counter>=5000){break;}
-} while ( diff_u >treshold && diff_v> treshold);
+} while ( diff_u >treshold && diff_v> treshold );
 
-        u_k_new=cut(u_k_new,boundary);
-        v_k_new=cut(v_k_new,boundary); 
+        u_k_new=cut(u_k_new,border);
+        v_k_new=cut(v_k_new,border); 
 
        result.putMatrix(u_k_new,0);      
        result.putMatrix(v_k_new,1);      
@@ -909,7 +982,7 @@ bool flag =false;
 }
 
 
-CTensor<float> Horn_SchunkOptFlow(CMatrix<float> image1, CMatrix<float> image2, int sigma, bool presmoothing, float alpha, float treshold, int method_choice){
+CTensor<float> Horn_SchunkOptFlow(CMatrix<float> image1, CMatrix<float> image2, int sigma, bool presmoothing, float alpha, float treshold, int method_choice, float gamma){
     
     int width =image1.xSize();
     int height=image1.ySize();
@@ -937,11 +1010,11 @@ CTensor<float> Horn_SchunkOptFlow(CMatrix<float> image1, CMatrix<float> image2, 
 
 
     if(method_choice==method::Jacoby){
-        result=JacobyHSTV(image1, image2,  alpha,  treshold);
+        result=JacobyHSTV(image1, image2,  alpha,  treshold,gamma);
     }else if(method_choice==method::Gauss_Seidel){
-        result=GaussSeidelHSTV( image1,  image2,  alpha,  treshold);
+        result=GaussSeidelHSTV( image1,  image2,  alpha,  treshold,gamma);
     }else if(method_choice==method::SOR){
-        result = SORHSTV( image1, image2,  alpha,  treshold);
+        result = SORHSTV( image1, image2,  alpha,  treshold,gamma);
     }
 return result;
   
@@ -988,7 +1061,7 @@ int main(int argc, char** argv) {
     
     //seq = loadSequence("resources/cropped-street/t.txt");
    seq = loadSequence("resources/yos/t.txt");
-  // seq = loadSequence("resources/gsalesman/t.txt");
+   //seq = loadSequence("resources/gsalesman/t.txt");
       CMatrix<float> img1;
       CMatrix<float> img2;
       bool presmoothing=false;
@@ -1000,10 +1073,11 @@ int main(int argc, char** argv) {
 	    img2 = seq(i+1);
         opticFlow(img1.xSize(),img1.ySize(),2);
 
-      float alpha = 15;
-      float treshold= 0.000000001;
-   //float treshold= 1;
-        opticFlow=Horn_SchunkOptFlow(img1 ,img2, sigma,  presmoothing, alpha,  treshold, method_choice);
+      float alpha = 500;
+      float gamma =30;
+      float treshold= 0.00000001;
+ 
+        opticFlow=Horn_SchunkOptFlow(img1 ,img2, sigma,  presmoothing, alpha,  treshold, method_choice, gamma);
 
     CTensor<float> Horn_SchunkFlowRGB(img1.xSize(), img1.ySize(),3);
 

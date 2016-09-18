@@ -17,149 +17,9 @@ OF::OF(){
 
 OF::~OF(){
 }
-//Dirichlet boundary conditions
-CMatrix<float> OF::Dirichlet_bound(CMatrix<float> aImage,int border_size){
-
-	CMatrix<float> result(aImage.xSize()+border_size*2,aImage.ySize()+border_size*2);
-	result.fill(0);
-	//center matrix
-	for(int x=0;x<aImage.xSize();x++)
-		for(int y=0;y<aImage.ySize();y++)
-		{
-			result(x+border_size,y+border_size)=aImage(x,y);
-		}
-
-return result;
-
-}
-//Cut  boundaries
-CMatrix<float> OF::cut(CMatrix<float>& image,int border_size){ 
-
-	CMatrix<float> realimage(image.xSize()-2*border_size,image.ySize()-2*border_size);
-	for(int x=0;x<realimage.xSize();x++)
-		for(int y=0; y<realimage.ySize();y++)
-		{
-			realimage(x,y)=image(x+border_size,y+border_size);
-		}
-
-		return realimage;
-}
-
-// Neumann boundry conditions
-CMatrix<float> OF::Neumann_bound(CMatrix<float> aImage,int border_size){
-
-	CMatrix<float> result(aImage.xSize()+border_size*2,aImage.ySize()+border_size*2);
-	result.fill(0);
-	//center matrix
-	for(int x=0;x<aImage.xSize();x++)
-		for(int y=0;y<aImage.ySize();y++)
-		{
-			result(x+border_size,y+border_size)=aImage(x,y);
-		}
-		//Top
-		for(int x=0;x<aImage.xSize();x++)
-			for(int y=0;y<border_size;y++)
-			{
-				result(x+border_size,y)=aImage(x,border_size-1-y);
-			}
-			//Bottom
-			for(int x=0;x<aImage.xSize();x++)
-				for(int y=0;y<border_size;y++)
-				{
-					result(x+border_size,y+aImage.ySize()+border_size)=aImage(x,aImage.ySize()-1-y);
-				}
-				//left side
-				for(int x=0;x<border_size;x++)
-					for(int y=0;y<aImage.ySize();y++)
-					{
-						result(x,y+border_size)=aImage(border_size-1-x,y);
-					}
-
-					//right side
-					for(int x=0;x<border_size;x++)
-						for(int y=0;y<aImage.ySize();y++)
-						{
-							result(x+aImage.xSize()+border_size,y+border_size)=aImage(aImage.xSize()-1-x,y);
-						}
-						//up left square
-						for(int x=0;x<border_size;x++)
-							for(int y=0;y<border_size;y++)
-							{
-								result(x,y)=aImage(0,0);
-							}
-							//up right square
-							for(int x=aImage.xSize()-1;x<(aImage.xSize()+border_size);x++)
-								for(int y=0;y<border_size;y++)
-								{
-									result(x+border_size,y)=aImage(aImage.xSize()-1,0);
-								}
-								//down left square
-								for(int x=0;x<border_size;x++)
-									for(int y=aImage.ySize()-1;y<(aImage.ySize()+border_size);y++)
-									{
-										result(x,y+border_size)=aImage(0,aImage.ySize()-1);
-									}
-									//down right square
-									for(int x=aImage.xSize()-1;x<(aImage.xSize()+border_size);x++)
-										for(int y=aImage.ySize()-1;y<(aImage.ySize()+border_size);y++)
-										{
-											result(x+border_size,y+border_size)=aImage(aImage.xSize()-1,aImage.ySize()-1);
-										}		
-										return result;
-}
 
 
-//Gaussian Kernel 2D witch acc 3 sigma
-CMatrix<float> OF::Gauss(int sigma){
 
-	size_t filter_size = size_t(6*sigma+1);
-	std::cout<<"filter_size_Gauss= "<<filter_size<<" pixels"<<std::endl;
-	CMatrix<float> filter(filter_size,filter_size);
-	if ( filter_size % 2 == 0 )
-		++filter_size;
-	int m=(filter_size-1)/2;
-	filter.fill(0);
-	float n=0;
-	float sum=0;
-	float sum1=0;
-	n=2*sigma*sigma;
-	for(int x=-m;x<=m;x++)
-		for(int y=-m;y<=m;y++)
-		{
-			filter(x+m,y+m)=(exp(-((x*x+y*y)/n)))/n*3.1415926536;
-			sum+=filter(x+m,y+m);
-
-		}	
-
-		// normalize the Kernel
-		for(size_t i = 0; i < filter_size; ++i)
-			for(size_t j = 0; j < filter_size; ++j)
-			{  filter(i,j) /= sum;
-		sum1+=filter(i,j);
-
-		}
-		return filter;
-}
-
-//Gaussian filter
-CMatrix<float> OF::Gfilter(CMatrix<float> Gauss, CMatrix<float> boundary_Image,int border){
-	CMatrix<float> image( boundary_Image.xSize(),boundary_Image.ySize());
-	image.fill(0);
-	//int border=sigma*3;
-
-	//Filtering
-	for(int x=border;x<boundary_Image.xSize()-border;x++)
-		for(int y=border;y<boundary_Image.ySize()-border;y++)
-		{
-			for(int i=0;i<Gauss.xSize();i++)
-				for (int j=0;j<Gauss.ySize();j++)
-				{
-					image(x,y)+=boundary_Image(x-border+i,y-border+j)*Gauss(i,j);
-				}
-		}
-
-		return image;
-}
 
 //  diff -0,5 0 0,5
 void OF::diffXY(CMatrix<float> Image,  CMatrix<float> &dx, CMatrix<float> &dy){
@@ -425,15 +285,15 @@ CTensor<float> OF::Horn_SchunkOptFlow(CMatrix<float> image1, CMatrix<float> imag
 
        
     if(sigma>0){
-      kernel=Gauss(sigma);//create Gauss kernel
+      kernel=filter.Gauss(sigma);//create Gauss kernel
         //Pre-smooth  image with Gauss kernel if presmoothing is true
         if(presmoothing==true){
         //apply Neumann boundary condition 
         image1=Neumann_bound(image1,border_size);
 	    image2=Neumann_bound(image2,border_size); 
         //Pre-smoothing initial images
-        image1=Gfilter(kernel, image1, border_size);
-        image2=Gfilter(kernel, image2, border_size);
+        image1=filter.Gfilter(kernel, image1, border_size);
+        image2=filter.Gfilter(kernel, image2, border_size);
         image1=cut(image1, border_size);
         image2=cut(image2, border_size);    
         }

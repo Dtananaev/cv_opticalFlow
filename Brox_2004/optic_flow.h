@@ -19,35 +19,27 @@
 #include "load_sequence.h"
 #include "flowToImage.h"
 #include "string"
+#include "boundary.h"
+#include "Gauss_filter.h"
 
-
-class OF{
+class OF: boundary  {
 
 public:
     OF();
     virtual ~OF();
-
-    //Boundary conditions
-    CMatrix<float> Dirichlet_bound(CMatrix<float> aImage,int border_size);
-    CMatrix<float> Neumann_bound(CMatrix<float> aImage,int border_size);
-    CMatrix<float> cut(CMatrix<float>& image,int border_size);
-
-    //Gaussian Kernel and Filter
-    CMatrix<float> Gauss(int sigma);//Kernel
-    CMatrix<float> Gfilter(CMatrix<float> Gauss, CMatrix<float> boundary_Image,int border); //Filter
-
     //Derivatives
     void diffXY(CMatrix<float> Image,  CMatrix<float> &dx, CMatrix<float> &dy);//  diff -0,5 0 0,5
     void difForwXY(CMatrix<float> Image,  CMatrix<float> &dx, CMatrix<float> &dy);//  diff -1 1
 
-    //Optic flow estiomation
+    //Optic flow estimation
     void calculateTV(CMatrix<float> u_k, CMatrix<float> v_k, CMatrix<float>& g_1,CMatrix<float>& g_2,CMatrix<float>& g_3,CMatrix<float>& g_4, int border );
 
-    CTensor<float> GaussSeidelHSTV(CMatrix<float> image1, CMatrix<float> image2, float alpha, float treshold, float gamma);
-    CTensor<float> Horn_SchunkOptFlow(CMatrix<float> image1, CMatrix<float> image2, int sigma, bool presmoothing, float alpha, float treshold, float gamma);
+    CTensor<float> GaussSeidelHSTV(CMatrix<float> image1, CMatrix<float> image2, float alpha, float treshold, float gamma); //solver
+
+    CTensor<float> Horn_SchunkOptFlow(CMatrix<float> image1, CMatrix<float> image2, int sigma, bool presmoothing, float alpha, float treshold, float gamma);// whole algorithm
 
 private:
-
+    GaussF filter;
 };
 
 

@@ -499,32 +499,32 @@ CTensor<float> SORHS(CMatrix<float> imageR1, CMatrix<float> imageR2,CMatrix<floa
     //To make computation simpler  and have all matrices of the same size apply Neumann boundary conditions with border size 1 to derivatives and image1
 
     //Red
-    imageR1=Dirichlet_bound(imageR1,1);
-    IzR=Dirichlet_bound(IzR,1);
-    IxR=Dirichlet_bound(IxR,1);
-    IyR=Dirichlet_bound(IyR,1);   
+    imageR1=Neumann_bound(imageR1,1);
+    IzR=Neumann_bound(IzR,1);
+    IxR=Neumann_bound(IxR,1);
+    IyR=Neumann_bound(IyR,1);   
     //Green
-    imageG1=Dirichlet_bound(imageG1,1);
-    IzG=Dirichlet_bound(IzG,1);
-    IxG=Dirichlet_bound(IxG,1);
-    IyG=Dirichlet_bound(IyG,1);   
+    imageG1=Neumann_bound(imageG1,1);
+    IzG=Neumann_bound(IzG,1);
+    IxG=Neumann_bound(IxG,1);
+    IyG=Neumann_bound(IyG,1);   
     //Blue 
-    imageB1=Dirichlet_bound(imageB1,1);
-    IzB=Dirichlet_bound(IzB,1);
-    IxB=Dirichlet_bound(IxB,1);
-    IyB=Dirichlet_bound(IyB,1); 
+    imageB1=Neumann_bound(imageB1,1);
+    IzB=Neumann_bound(IzB,1);
+    IxB=Neumann_bound(IxB,1);
+    IyB=Neumann_bound(IyB,1); 
     //Horn-Schunck optic flow with Jacoby method
      //CMatrix<float> u_k(imageR1);
     // CMatrix<float> v_k(imageR1);      
-     CMatrix<float> u_k(imageR1.xSize(),imageR1.ySize(),0);
+    CMatrix<float> u_k(imageR1.xSize(),imageR1.ySize(),0);
      CMatrix<float> v_k(imageR1.xSize(),imageR1.ySize(),0);
      CMatrix<float> u_k_new(imageR1.xSize(),imageR1.ySize(),0);
      CMatrix<float> v_k_new(imageR1.xSize(),imageR1.ySize(),0);
      float diff_u,diff_v;
 
-    float w1=0.33;
-    float w2=0.33;
-    float w3=0.34;
+    float w1=1;
+    float w2=1;
+    float w3=1;
    
                     
   do{ 
@@ -695,7 +695,8 @@ int main(int argc, char** argv) {
         CMatrix<float> imageB2(img1.xSize(), img1.ySize());
         image2rgb(img1, imageR1, imageG1, imageB1);
         image2rgb(img2, imageR2, imageG2, imageB2);
-        opticFlow(imageR1.xSize(),imageR1.ySize(),2);
+
+       opticFlow(imageR1.xSize(),imageR1.ySize(),2);
 
       float alpha = 500;
       float treshold= 0.000000001;
@@ -705,6 +706,9 @@ int main(int argc, char** argv) {
     CTensor<float> Horn_SchunkFlowRGB(imageR1.xSize(), imageR1.ySize(),3);
 
     flowToImage(opticFlow, Horn_SchunkFlowRGB);
+    //Horn_SchunkFlowRGB.putMatrix(imageR2,0);
+   // Horn_SchunkFlowRGB.putMatrix(imageG2,1);
+   // Horn_SchunkFlowRGB.putMatrix(imageB2,2);
 
 	Horn_SchunkFlowRGB.writeToPPM(("result/"+folderNameInput + std::to_string(i)+ ".ppm").c_str());
 

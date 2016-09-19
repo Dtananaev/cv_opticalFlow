@@ -299,12 +299,17 @@ std::cin.get();
         //upsample optic flow from previous step    
         u.upsampleBilinear(aNewXSize,aNewYSize);
         v.upsampleBilinear(aNewXSize,aNewYSize);
+    CTensor<float> oFlow(aNewXSize,aNewYSize,2);
+
+        oFlow.putMatrix(u,0);
+        oFlow.putMatrix(v,1);
+         CTensor<float> Horn_SchunkFlowRGB(aNewXSize,aNewYSize,3);
+     flowToImage(oFlow, Horn_SchunkFlowRGB);
+	    Horn_SchunkFlowRGB.writeToPPM("result/current_flow.ppm");
         CMatrix<float> du(aNewXSize,aNewYSize,0);
         CMatrix<float> dv(aNewXSize,aNewYSize,0); 
         CMatrix<float> du_new(aNewXSize,aNewYSize,0);
-        CMatrix<float> dv_new(aNewXSize,aNewYSize,0);
-       // CMatrix<float> u_new(aNewXSize,aNewYSize,1);
-       // CMatrix<float> v_new(aNewXSize,aNewYSize,1); 
+        CMatrix<float> dv_new(aNewXSize,aNewYSize,0);   
      
 
         //downsample images to necessary lvl

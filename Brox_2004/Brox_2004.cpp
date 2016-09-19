@@ -7,7 +7,7 @@
  */
 
 #include "optic_flow.h"
-#include "boundary.h"
+//#include "boundary.h"
 #include <math.h>       /* modf */
 #include "CMatrix.h"
 #include "CFilter.h" // Csmooth and Cderivative
@@ -15,12 +15,93 @@
 #include "load_sequence.h"
 #include "flowToImage.h"
 #include "string"
+
+//Cut  boundaries
+CMatrix<float> cut(CMatrix<float>& image,int border_size){ 
+
+	CMatrix<float> realimage(image.xSize()-2*border_size,image.ySize()-2*border_size);
+	for(int x=0;x<realimage.xSize();x++)
+		for(int y=0; y<realimage.ySize();y++)
+		{
+			realimage(x,y)=image(x+border_size,y+border_size);
+		}
+
+		return realimage;
+}
+
+// Neumann boundry conditions
+CMatrix<float> Neumann_bound(CMatrix<float> aImage,int border_size){
+
+	CMatrix<float> result(aImage.xSize()+border_size*2,aImage.ySize()+border_size*2);
+	result.fill(0);
+	//center matrix
+	for(int x=0;x<aImage.xSize();x++)
+		for(int y=0;y<aImage.ySize();y++)
+		{
+			result(x+border_size,y+border_size)=aImage(x,y);
+		}
+		//Top
+		for(int x=0;x<aImage.xSize();x++)
+			for(int y=0;y<border_size;y++)
+			{
+				result(x+border_size,y)=aImage(x,border_size-1-y);
+			}
+			//Bottom
+			for(int x=0;x<aImage.xSize();x++)
+				for(int y=0;y<border_size;y++)
+				{
+					result(x+border_size,y+aImage.ySize()+border_size)=aImage(x,aImage.ySize()-1-y);
+				}
+				//left side
+				for(int x=0;x<border_size;x++)
+					for(int y=0;y<aImage.ySize();y++)
+					{
+						result(x,y+border_size)=aImage(border_size-1-x,y);
+					}
+
+					//right side
+					for(int x=0;x<border_size;x++)
+						for(int y=0;y<aImage.ySize();y++)
+						{
+							result(x+aImage.xSize()+border_size,y+border_size)=aImage(aImage.xSize()-1-x,y);
+						}
+						//up left square
+						for(int x=0;x<border_size;x++)
+							for(int y=0;y<border_size;y++)
+							{
+								result(x,y)=aImage(0,0);
+							}
+							//up right square
+							for(int x=aImage.xSize()-1;x<(aImage.xSize()+border_size);x++)
+								for(int y=0;y<border_size;y++)
+								{
+									result(x+border_size,y)=aImage(aImage.xSize()-1,0);
+								}
+								//down left square
+								for(int x=0;x<border_size;x++)
+									for(int y=aImage.ySize()-1;y<(aImage.ySize()+border_size);y++)
+									{
+										result(x,y+border_size)=aImage(0,aImage.ySize()-1);
+									}
+									//down right square
+									for(int x=aImage.xSize()-1;x<(aImage.xSize()+border_size);x++)
+										for(int y=aImage.ySize()-1;y<(aImage.ySize()+border_size);y++)
+										{
+											result(x+border_size,y+border_size)=aImage(aImage.xSize()-1,aImage.ySize()-1);
+										}		
+										return result;
+}
+
+
 //  diff -0,5 0 0,5
 void diffXY(CMatrix<float> Image,  CMatrix<float> &dx, CMatrix<float> &dy){
-       boundary bound;
+
        int w =Image.xSize();
        int h =Image.ySize();
-       Image=bound.Neumann_bound(Image,1);
+         dx.setSize(Image.xSize(),Image.ySize());
+         dy.setSize(Image.xSize(),Image.ySize());
+       Image=Neumann_bound(Image,1);
+         
     dx.fill(0);
     dy.fill(0);
     for(int x=0; x<w; x++)
@@ -42,6 +123,19 @@ CTensor<float> warpImage(CMatrix<float> image1,CMatrix<float> image2, CMatrix<fl
    
     double  fractpart_u, intpart_u,fractpart_v, intpart_v;
 
+  //  std::cout<<"image1 size x"<<image1.xSize()<<"\n";
+  //  std::cout<<"image1 size y"<<image1.ySize()<<"\n";
+
+   // std::cout<<"image2 size x"<<image2.xSize()<<"\n";
+    //std::cout<<"image2 size y"<<image2.ySize()<<"\n";
+
+
+   // std::cout<<"u size x"<<u.xSize()<<"\n";
+  //  std::cout<<"u size y"<<u.ySize()<<"\n";
+
+  //  std::cout<<"v size x"<<v.xSize()<<"\n";
+  //  std::cout<<"v size y"<<v.ySize()<<"\n";
+ //   std::cin.get();
     for(int x=0; x<image1.xSize();x++)
         for(int y=0; y<image1.ySize();y++){
              // split optic flow values on integer and fractal parts
@@ -76,7 +170,7 @@ CTensor<float> warpImage(CMatrix<float> image1,CMatrix<float> image2, CMatrix<fl
             //For A1 
             if( x1>=0 && x1<image2.xSize() && y1>=0 && y1<image2.ySize() ){
                 A1=image2(x1,y1);
-             }else{A1=image1(x,y); labels(x,y)=0; }
+             }else{A1=image1(x,y); labels(x,y)=0;}
 
             //For A2
             if( x2>=0 && x2<image2.xSize() && y1>=0 && y1<image2.ySize() ){
@@ -113,14 +207,14 @@ CTensor<float> warpImage(CMatrix<float> image1,CMatrix<float> image2, CMatrix<fl
     }
     
     result.putMatrix(warpedImage,0);
-    result.putMatrix(warpedImage,1);
+    result.putMatrix(labels,1);
  return result;
 }
 
 
 //Gauss-Seidel method
 CTensor<float> Brox(CMatrix<float> image1, CMatrix<float> image2, float alpha, float treshold, int lvl, float downsamplStep){
-     boundary bound;  //boundary conditions    
+
          /*Gauss-Seidel method
             Linear system:
             Ax=b;  Split A=D+L+U; D-diagonal part of matrix ; L- lower diagonal part; U - upper diagonal part
@@ -143,8 +237,9 @@ CTensor<float> Brox(CMatrix<float> image1, CMatrix<float> image2, float alpha, f
      
     int aNewXSize=trunc(width*currentLVL);
     int aNewYSize= trunc(height*currentLVL);     
-    
-
+        std::cout<<"init aNewXSize   "<<aNewXSize<<"\n";
+        std::cout<<"init aNewYSize   "<<aNewYSize<<"\n";  
+     
     CMatrix<float> CoarseImage1(image1);
     CMatrix<float> CoarseImage2(image2);
 
@@ -154,7 +249,7 @@ CTensor<float> Brox(CMatrix<float> image1, CMatrix<float> image2, float alpha, f
   // apply derivatives on downsampled images
     CMatrix<float> Ix(aNewXSize,aNewYSize);
     CMatrix<float> Iy(aNewXSize,aNewYSize); 
-    diffXY(CoarseImage1, Ix, Iy);
+    diffXY(CoarseImage2, Ix, Iy);
 
 
     CMatrix<float> Iz(CoarseImage2);  
@@ -165,91 +260,97 @@ CTensor<float> Brox(CMatrix<float> image1, CMatrix<float> image2, float alpha, f
 
     //Execute optic flow on the coarsed images for initialization
       bool presmoothing=false;
-      CTensor<float> opticFlow;
-      CTensor<float> warpedImage;
+      CTensor<float>  opticFlow(aNewXSize,aNewYSize,2);
       OF flow;//init optic flow class
      // float gamma =10;
-       
-        opticFlow(aNewXSize,aNewYSize,2);
-
-
         //optic flow execut
         opticFlow=flow.Horn_SchunkOptFlow(CoarseImage1 ,CoarseImage2, 1,  presmoothing, alpha,  treshold, 10);
-        std::cout<<"1"<<"\n";
+ 
          //separate optic flow on the u and v matrices (just for convinience)
         CMatrix<float> u(opticFlow.getMatrix(0));
         CMatrix<float> v(opticFlow.getMatrix(1));
  
-     std::cout<<"2"<<"\n";
-
+     //CTensor<float> Horn_SchunkFlowRGB(CoarseImage1.xSize(), CoarseImage2.ySize(),3);
+   // flowToImage(opticFlow, Horn_SchunkFlowRGB);
+	//Horn_SchunkFlowRGB.writeToPPM("result/Init_flow.ppm");
+ // std::cin.get();
 //End of initialization: we have warped image and optic flow on coarse lvl now begin iterate
 
     float e = 0.001; // TV regularizer
-    float diff_u,diff_v;
+    float diff_u=10;
+    float diff_v=10;
     int number_of_pixels;
-     CMatrix<float> du;
-     CMatrix<float> dv;  
-     CMatrix<float> u_new;
-     CMatrix<float> v_new;  
-     CMatrix<float> index; //matrix which block pixels outside of the image border for data term 
-    int boundary=3;
-     
-  do{ 
-       diff_u=0;
-       diff_v=0;  
-        u=bound.cut(u,boundary);
-        v=bound.cut(v,boundary);
-       //upsample the optic flow for one lvl
-        lvl-=1;
-        currentLVL = pow(downsamplStep, double(lvl));
-     
+ 
+ 
+   //  CMatrix<float> index; //matrix which block pixels outside of the image border for data term 
+    int boundary=10;
+            lvl-=1;
+
+ for (int i=lvl; i>=0; i--) {  
+
+          std::cout<<"lvl "<<i<<"\n";
+
+        currentLVL = pow(downsamplStep, double(i));
+
         aNewXSize=trunc(width*currentLVL);
         aNewYSize= trunc(height*currentLVL);
         number_of_pixels=aNewXSize*aNewYSize;
+
         //upsample optic flow from previous step    
         u.upsampleBilinear(aNewXSize,aNewYSize);
         v.upsampleBilinear(aNewXSize,aNewYSize);
+        CMatrix<float> du(aNewXSize,aNewYSize,1);
+        CMatrix<float> dv(aNewXSize,aNewYSize,1); 
+        CMatrix<float> du_new(aNewXSize,aNewYSize,1);
+        CMatrix<float> dv_new(aNewXSize,aNewYSize,1);
+       // CMatrix<float> u_new(aNewXSize,aNewYSize,1);
+        //CMatrix<float> v_new(aNewXSize,aNewYSize,1); 
+     
 
         //downsample images to necessary lvl
         CoarseImage1 = image1;
         CoarseImage2 = image2;
 
+  
         CoarseImage1.downsampleBilinear(aNewXSize, aNewYSize);
         CoarseImage2.downsampleBilinear(aNewXSize, aNewYSize);
-
         //get warped image
-        warpedImage(aNewXSize,aNewYSize,2);
-        warpedImage= warpImage(CoarseImage1,CoarseImage2, u, v);
-
-        Iz=warpedImage.getMatrix(0);  
-        index=warpedImage.getMatrix(1);  
-     // apply derivatives on downsampled images
-         Ix(aNewXSize,aNewYSize);
-         Iy(aNewXSize,aNewYSize); 
-        diffXY(CoarseImage1, Ix, Iy);
 
 
+        CTensor<float> warpedImage= warpImage(CoarseImage1,CoarseImage2, u, v);
+        CMatrix<float> warp(warpedImage.getMatrix(0));        
+        CMatrix<float>  index(warpedImage.getMatrix(1));  
+        // apply derivatives on downsampled images
+            diffXY(CoarseImage1, Ix, Iy);
+            Iz=warpedImage.getMatrix(0);
          for(int x=0; x<aNewXSize; x++)
     	    for(int y=0;y<aNewYSize;y++) { 
              Iz(x,y)-=CoarseImage1(x,y);
           }
 
+       //for simplicity extend borders
+    Iz=Neumann_bound(Iz,boundary);
+    Ix=Neumann_bound(Ix,boundary);
+    Iy=Neumann_bound(Iy,boundary); 
+    index=Neumann_bound(index,boundary);
+   do{ 
 
-    //for simplicity extend borders
 
+      
+       diff_u=0;
+       diff_v=0;  
 
-    Iz=bound.Neumann_bound(Iz,boundary);
-    Ix=bound.Neumann_bound(Ix,boundary);
-    Iy=bound.Neumann_bound(Iy,boundary); 
-    u=bound.Neumann_bound(u,boundary);
-    v=bound.Neumann_bound(v,boundary); 
-            //reset increment
-             du(Iz.xSize(),Iz.ySize());
-             dv(Iz.xSize(),Iz.ySize());
+    u=Neumann_bound(u,boundary);
+    v=Neumann_bound(v,boundary); 
+
+    du=Neumann_bound(du,boundary);
+    dv=Neumann_bound(dv,boundary);        
 
     for(int x=boundary; x<Iz.xSize()-boundary; x++)
     		for(int y=boundary;y<Iz.ySize()-boundary;y++) {  
        
+        
+    
         //Lagged diffusivity scheme: First calculate the nonlinear part which is TV diffusion
          /*    
 
@@ -316,7 +417,7 @@ CTensor<float> Brox(CMatrix<float> image1, CMatrix<float> image2, float alpha, f
 
           SQgradV =  0.25* ( v(a+1,b)-v(a-1,b) ) * ( v(a+1,b)-v(a-1,b) )  + 0.25* ( v(a,b+1)-v(a,b-1) ) * ( v(a,b+1)-v(a,b-1) );
         
-       float Cd = 1/sqrt(   SQgradU + SQgradV +e*e  );
+       float C = 1/sqrt(   SQgradU + SQgradV +e*e  );
 
         //Calculating D = g(x,y+1)  
          a =x; b = y+1;
@@ -339,53 +440,58 @@ CTensor<float> Brox(CMatrix<float> image1, CMatrix<float> image2, float alpha, f
 
     //Calculating our functions for solver and keep them constant for one iteration
        g_1 = 0.5* (A + B );
-       g_2 = 0.5* (A + Cd );
+       g_2 = 0.5* (A + C );
        g_3 = 0.5* (A + D );   
        g_4 = 0.5* (A + E );
 
     //calculate constant nonlinear part
-   float C=1/sqrt(Iz(x,y)*Iz(x,y)+e*e);
-    
+   float Ct=1/sqrt(Iz(x,y)*Iz(x,y)+e*e);  
+   //Gauss-Seidel linear solver for Optic flow
+   float SmoothConst=g_1+g_2+g_3+g_4;
+   float SmoothU= g_1*u(x+1,y)+g_2*u(x-1,y)+ g_3*u(x,y+1)+g_4*u(x,y-1);
+   float SmoothV= g_1*v(x+1,y)+g_2*v(x-1,y)+ g_3*v(x,y+1)+g_4*v(x,y-1);
+   float denomU= Ct*Ix(x,y)*Ix(x,y)*index(x,y)+alpha*SmoothConst;
+   float denomV= Ct*Iy(x,y)*Iy(x,y)*index(x,y)+alpha*SmoothConst;
+      
 
-    // Calculate 
-    
+     du_new(x,y)= ( alpha*SmoothU - SmoothConst* u(x,y) - ( Ct*Iy(x,y)*Ix(x,y)*dv(x,y)+Iz(x,y)*Ix(x,y) ) * index(x,y) )/denomU;
+
+
+       dv_new(x,y)= ( alpha*SmoothV - SmoothConst* v(x,y) - ( Ct*Iy(x,y)*Ix(x,y)*du(x,y)+Iz(x,y)*Iy(x,y) ) * index(x,y) )/denomV;  
    
-    //Gauss-Seidel linear solver for Optic flow
-    
-    
 
-        du(x,y)=( 1/(C*Ix(x,y)*Ix(x,y) - 0.5*alpha * (g_1-g_2+g_3-g_4)) )* ( 0.5*alpha*(0.5*g_1* (u(x+2,y)-u(x,y)+u(x+1,y+1)-u(x+1,y-1) ) -0.5*g_2*(u(x,y)-u(x-2,y)+u(x-1,y+1)-u(x-1,y-1)) +0.5*g_3*(u(x+1,y+1)-u(x-1,y+1)+u(x,y+2)-u(x,y)) -0.5*g_4*(u(x+1,y-1)-u(x-1,y-1)+u(x,y)-u(x,y-2))) -( 0.5*C*Iy(x,y)*Ix(x,y)*(v(x+1,y)-v(x-1,y)+v(x,y+1)-v(x,y-1)) + C*Iz(x,y)*Ix(x,y))*index(x,y));
+          
 
-
-        dv(x,y)=( 1/(C*Iy(x,y)*Iy(x,y) - 0.5*alpha * (g_1-g_2+g_3-g_4)) )* ( 0.5*alpha*(0.5*g_1* (v(x+2,y)-v(x,y)+v(x+1,y+1)-v(x+1,y-1) ) -0.5*g_2*(v(x,y)-v(x-2,y)+v(x-1,y+1)-v(x-1,y-1)) +0.5*g_3*(v(x+1,y+1)-v(x-1,y+1)+v(x,y+2)-v(x,y)) -0.5*g_4*(v(x+1,y-1)-v(x-1,y-1)+v(x,y)-v(x,y-2))) -( 0.5*C*Iy(x,y)*Ix(x,y)*(u(x+1,y)-u(x-1,y)+u(x,y+1)-u(x,y-1)) + C*Iz(x,y)*Iy(x,y))*index(x,y));
-
-        u_new(x,y)=u(x,y)+du(x,y);
-        v_new(x,y)=v(x,y)+dv(x,y);
-        
-        diff_u+=  du(x,y)* du(x,y);
-        diff_v+=  dv(x,y)* dv(x,y);    
-            
-
-
+        diff_u+=  du_new(x,y)* du_new(x,y);
+        diff_v+=  dv_new(x,y)* dv_new(x,y);    
+     
+      
     }
  
-         u=u_new;
-         v=v_new;  
-      
-    
-          diff_u=  diff_u/ number_of_pixels;
-          diff_v=  diff_v/ number_of_pixels;
+        du=du_new;
+        dv=dv_new;
+        diff_u=  diff_u/ number_of_pixels;
+        diff_v=  diff_v/ number_of_pixels;
         std::cout<<"diff_u "<<diff_u<<"\n";
-         std::cout<<"diff_v "<<diff_v<<"\n";
+        std::cout<<"diff_v "<<diff_v<<"\n";
 
+    }  while ( diff_u > treshold && diff_v> treshold);
 
-} while ( diff_u >treshold && diff_v> treshold && lvl>0);
+    for(int x=boundary; x<Iz.xSize()-boundary; x++)
+    		for(int y=boundary;y<Iz.ySize()-boundary;y++) {  
+        u(x,y)=u(x,y)+du(x,y);
+        v(x,y)=v(x,y)+dv(x,y);
 
-        u_new=bound.cut(u_new,boundary);
-        v_new=bound.cut(v_new,boundary); 
+    }
+        u=cut(u,boundary);
+        v=cut(v,boundary);  
+       
+}
+   //   u=cut(t,boundary);
+    //    v=cut(v,boundary); 
 
-       result.putMatrix(u_new,0);      
-       result.putMatrix(v_new,1);      
+       result.putMatrix(u,0);      
+       result.putMatrix(v,1);      
 
     return result; 
 
@@ -401,7 +507,8 @@ int main(int argc, char** argv) {
       float alpha = 500;
      // float gamma =10;
       float treshold= 0.00000001;
-        int lvl=5; 
+  //  float treshold= -0.00000001;
+        int lvl=20; 
         float downsamplStep=0.95;
     std::string folderNameInput;
 

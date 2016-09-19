@@ -249,7 +249,7 @@ CTensor<float> Brox(CMatrix<float> image1, CMatrix<float> image2, float alpha, f
   // apply derivatives on downsampled images
     CMatrix<float> Ix(aNewXSize,aNewYSize);
     CMatrix<float> Iy(aNewXSize,aNewYSize); 
-    diffXY(CoarseImage2, Ix, Iy);
+    diffXY(CoarseImage1, Ix, Iy);
 
 
     CMatrix<float> Iz(CoarseImage2);  
@@ -321,8 +321,8 @@ CTensor<float> Brox(CMatrix<float> image1, CMatrix<float> image2, float alpha, f
         CMatrix<float> warp(warpedImage.getMatrix(0));        
         CMatrix<float>  index(warpedImage.getMatrix(1));  
         // apply derivatives on downsampled images
-            diffXY(CoarseImage1, Ix, Iy);
-            Iz=warpedImage.getMatrix(0);
+            diffXY(warp, Ix, Iy);
+            Iz=warp;
          for(int x=0; x<aNewXSize; x++)
     	    for(int y=0;y<aNewYSize;y++) { 
              Iz(x,y)-=CoarseImage1(x,y);

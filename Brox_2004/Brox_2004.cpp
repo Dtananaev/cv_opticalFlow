@@ -289,7 +289,7 @@ CTensor<float> Brox(CMatrix<float> image1, CMatrix<float> image2, float alpha, f
  for (int i=lvl; i>=0; i--) {  
 
           std::cout<<"lvl "<<i<<"\n";
-
+std::cin.get();
         currentLVL = pow(downsamplStep, double(i));
 
         aNewXSize=trunc(width*currentLVL);
@@ -299,12 +299,12 @@ CTensor<float> Brox(CMatrix<float> image1, CMatrix<float> image2, float alpha, f
         //upsample optic flow from previous step    
         u.upsampleBilinear(aNewXSize,aNewYSize);
         v.upsampleBilinear(aNewXSize,aNewYSize);
-        CMatrix<float> du(aNewXSize,aNewYSize,1);
-        CMatrix<float> dv(aNewXSize,aNewYSize,1); 
-        CMatrix<float> du_new(aNewXSize,aNewYSize,1);
-        CMatrix<float> dv_new(aNewXSize,aNewYSize,1);
+        CMatrix<float> du(aNewXSize,aNewYSize,0);
+        CMatrix<float> dv(aNewXSize,aNewYSize,0); 
+        CMatrix<float> du_new(aNewXSize,aNewYSize,0);
+        CMatrix<float> dv_new(aNewXSize,aNewYSize,0);
        // CMatrix<float> u_new(aNewXSize,aNewYSize,1);
-        //CMatrix<float> v_new(aNewXSize,aNewYSize,1); 
+       // CMatrix<float> v_new(aNewXSize,aNewYSize,1); 
      
 
         //downsample images to necessary lvl
@@ -333,6 +333,13 @@ CTensor<float> Brox(CMatrix<float> image1, CMatrix<float> image2, float alpha, f
     Ix=Neumann_bound(Ix,boundary);
     Iy=Neumann_bound(Iy,boundary); 
     index=Neumann_bound(index,boundary);
+    u=Neumann_bound(u,boundary);
+    v=Neumann_bound(v,boundary); 
+
+    du=Neumann_bound(du,boundary);
+    dv=Neumann_bound(dv,boundary);        
+    du_new=Neumann_bound(du_new,boundary);
+    dv_new=Neumann_bound(dv_new,boundary);
    do{ 
 
 
@@ -340,11 +347,7 @@ CTensor<float> Brox(CMatrix<float> image1, CMatrix<float> image2, float alpha, f
        diff_u=0;
        diff_v=0;  
 
-    u=Neumann_bound(u,boundary);
-    v=Neumann_bound(v,boundary); 
 
-    du=Neumann_bound(du,boundary);
-    dv=Neumann_bound(dv,boundary);        
 
     for(int x=boundary; x<Iz.xSize()-boundary; x++)
     		for(int y=boundary;y<Iz.ySize()-boundary;y++) {  
@@ -423,7 +426,7 @@ CTensor<float> Brox(CMatrix<float> image1, CMatrix<float> image2, float alpha, f
          a =x; b = y+1;
     
             SQgradU =  0.25* ( u(a+1,b)-u(a-1,b) ) * ( u(a+1,b)-u(a-1,b) )  + 0.25* ( u(a,b+1)-u(a,b-1) ) * ( u(a,b+1)-u(a,b-1) );
-
+ 
           SQgradV =  0.25* ( v(a+1,b)-v(a-1,b) ) * ( v(a+1,b)-v(a-1,b) )  + 0.25* ( v(a,b+1)-v(a,b-1) ) * ( v(a,b+1)-v(a,b-1) );
 
        float D = 1/sqrt(   SQgradU + SQgradV +e*e  );
@@ -448,8 +451,10 @@ CTensor<float> Brox(CMatrix<float> image1, CMatrix<float> image2, float alpha, f
    float Ct=1/sqrt(Iz(x,y)*Iz(x,y)+e*e);  
    //Gauss-Seidel linear solver for Optic flow
    float SmoothConst=g_1+g_2+g_3+g_4;
-   float SmoothU= g_1*u(x+1,y)+g_2*u(x-1,y)+ g_3*u(x,y+1)+g_4*u(x,y-1);
+  float SmoothU= g_1*u(x+1,y)+g_2*u(x-1,y)+ g_3*u(x,y+1)+g_4*u(x,y-1);
    float SmoothV= g_1*v(x+1,y)+g_2*v(x-1,y)+ g_3*v(x,y+1)+g_4*v(x,y-1);
+   //float SmoothU= g_1*u(x+1,y)+g_2*u(x-1,y)+ g_3*u(x,y+1)+g_4*u(x,y-1) +g_1*du(x+1,y)+g_2*du(x-1,y)+ g_3*du(x,y+1)+g_4*du(x,y-1);
+  // float SmoothV= g_1*v(x+1,y)+g_2*v(x-1,y)+ g_3*v(x,y+1)+g_4*v(x,y-1) + g_1*v(x+1,y)+g_2*dv(x-1,y)+ g_3*dv(x,y+1)+g_4*dv(x,y-1);
    float denomU= Ct*Ix(x,y)*Ix(x,y)*index(x,y)+alpha*SmoothConst;
    float denomV= Ct*Iy(x,y)*Iy(x,y)*index(x,y)+alpha*SmoothConst;
       
@@ -457,15 +462,18 @@ CTensor<float> Brox(CMatrix<float> image1, CMatrix<float> image2, float alpha, f
      du_new(x,y)= ( alpha*SmoothU - SmoothConst* u(x,y) - ( Ct*Iy(x,y)*Ix(x,y)*dv(x,y)+Iz(x,y)*Ix(x,y) ) * index(x,y) )/denomU;
 
 
-       dv_new(x,y)= ( alpha*SmoothV - SmoothConst* v(x,y) - ( Ct*Iy(x,y)*Ix(x,y)*du(x,y)+Iz(x,y)*Iy(x,y) ) * index(x,y) )/denomV;  
+      dv_new(x,y)= ( alpha*SmoothV - SmoothConst* v(x,y) - ( Ct*Iy(x,y)*Ix(x,y)*du(x,y)+Iz(x,y)*Iy(x,y) ) * index(x,y) )/denomV;  
    
+   //du_new(x,y)= (1 / ((g_1+g_2+g_3+g_4)*alpha + Ix(x,y)*Ix(x,y)) ) * ( alpha* (g_2*du(x-1,y)+g_1*du(x+1,y)+g_4*du(x,y-1)+g_3*du(x,y+1))  -Ix(x,y)*Iy(x,y)*dv(x,y) - Ix(x,y)*Iz(x,y) );
+            
 
+       //     dv_new(x,y) = (1/ ((g_1+g_2+g_3+g_4)*alpha+ Iy(x,y)*Iy(x,y)) )*(alpha* (g_2*dv(x-1,y)+g_1*dv(x+1,y)+g_4*dv(x,y-1)+g_3*dv(x,y+1)) - Iy(x,y)*Ix(x,y)*du(x,y) -Iy(x,y)*Iz(x,y) );
           
 
-        diff_u+=  du_new(x,y)* du_new(x,y);
-        diff_v+=  dv_new(x,y)* dv_new(x,y);    
+        diff_u+=  (du_new(x,y)- du(x,y))* (du_new(x,y)- du(x,y));
+        diff_v+=  (dv_new(x,y)- dv(x,y))* (dv_new(x,y)- dv(x,y));    
+
      
-      
     }
  
         du=du_new;
@@ -487,8 +495,7 @@ CTensor<float> Brox(CMatrix<float> image1, CMatrix<float> image2, float alpha, f
         v=cut(v,boundary);  
        
 }
-   //   u=cut(t,boundary);
-    //    v=cut(v,boundary); 
+
 
        result.putMatrix(u,0);      
        result.putMatrix(v,1);      

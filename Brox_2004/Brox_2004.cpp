@@ -15,7 +15,21 @@
 #include "load_sequence.h"
 #include "flowToImage.h"
 #include "string"
+//Dirichlet boundary conditions
+CMatrix<float> Dirichlet_bound(CMatrix<float> aImage,int border_size){
 
+	CMatrix<float> result(aImage.xSize()+border_size*2,aImage.ySize()+border_size*2);
+	result.fill(0);
+	//center matrix
+	for(int x=0;x<aImage.xSize();x++)
+		for(int y=0;y<aImage.ySize();y++)
+		{
+			result(x+border_size,y+border_size)=aImage(x,y);
+		}
+
+return result;
+
+}
 //Cut  boundaries
 CMatrix<float> cut(CMatrix<float>& image,int border_size){ 
 
@@ -277,8 +291,8 @@ CTensor<float> Brox(CMatrix<float> image1, CMatrix<float> image2, float alpha, f
 //End of initialization: we have warped image and optic flow on coarse lvl now begin iterate
 
     float e = 0.001; // TV regularizer
-    float diff_u=10;
-    float diff_v=10;
+    float diff_u;
+    float diff_v;
     int number_of_pixels;
  
  
@@ -289,7 +303,7 @@ CTensor<float> Brox(CMatrix<float> image1, CMatrix<float> image2, float alpha, f
  for (int i=lvl; i>=0; i--) {  
 
           std::cout<<"lvl "<<i<<"\n";
-std::cin.get();
+//std::cin.get();
         currentLVL = pow(downsamplStep, double(i));
 
         aNewXSize=trunc(width*currentLVL);
@@ -306,8 +320,8 @@ std::cin.get();
          CTensor<float> Horn_SchunkFlowRGB(aNewXSize,aNewYSize,3);
      flowToImage(oFlow, Horn_SchunkFlowRGB);
 	    Horn_SchunkFlowRGB.writeToPPM("result/current_flow.ppm");
-        CMatrix<float> du(aNewXSize,aNewYSize,0);
-        CMatrix<float> dv(aNewXSize,aNewYSize,0); 
+        CMatrix<float> du(aNewXSize,aNewYSize,10);
+        CMatrix<float> dv(aNewXSize,aNewYSize,10); 
         CMatrix<float> du_new(aNewXSize,aNewYSize,0);
         CMatrix<float> dv_new(aNewXSize,aNewYSize,0);   
      
@@ -316,14 +330,16 @@ std::cin.get();
         CoarseImage1 = image1;
         CoarseImage2 = image2;
 
-  
+        if(i>0){
         CoarseImage1.downsampleBilinear(aNewXSize, aNewYSize);
         CoarseImage2.downsampleBilinear(aNewXSize, aNewYSize);
+        }
         //get warped image
 
 
         CTensor<float> warpedImage= warpImage(CoarseImage1,CoarseImage2, u, v);
-        CMatrix<float> warp(warpedImage.getMatrix(0));        
+        CMatrix<float> warp(warpedImage.getMatrix(0));     
+   warp.writeToPGM("result/current_warp.pgm");   
         CMatrix<float>  index(warpedImage.getMatrix(1));  
         // apply derivatives on downsampled images
             diffXY(warp, Ix, Iy);
@@ -454,26 +470,37 @@ std::cin.get();
 
     //calculate constant nonlinear part
    float Ct=1/sqrt(Iz(x,y)*Iz(x,y)+e*e);  
+
+/*
    //Gauss-Seidel linear solver for Optic flow
-   float SmoothConst=g_1+g_2+g_3+g_4;
-  float SmoothU= g_1*u(x+1,y)+g_2*u(x-1,y)+ g_3*u(x,y+1)+g_4*u(x,y-1);
-   float SmoothV= g_1*v(x+1,y)+g_2*v(x-1,y)+ g_3*v(x,y+1)+g_4*v(x,y-1);
-   //float SmoothU= g_1*u(x+1,y)+g_2*u(x-1,y)+ g_3*u(x,y+1)+g_4*u(x,y-1) +g_1*du(x+1,y)+g_2*du(x-1,y)+ g_3*du(x,y+1)+g_4*du(x,y-1);
-  // float SmoothV= g_1*v(x+1,y)+g_2*v(x-1,y)+ g_3*v(x,y+1)+g_4*v(x,y-1) + g_1*v(x+1,y)+g_2*dv(x-1,y)+ g_3*dv(x,y+1)+g_4*dv(x,y-1);
-   float denomU= Ct*Ix(x,y)*Ix(x,y)*index(x,y)+alpha*SmoothConst;
-   float denomV= Ct*Iy(x,y)*Iy(x,y)*index(x,y)+alpha*SmoothConst;
-      
+   float SmoothConst=alpha*(g_1+g_2+g_3+g_4);
+  // float denomU= Ct*Ix(x,y)*Ix(x,y)*index(x,y)+alpha*SmoothConst;
+   //float denomV= Ct*Iy(x,y)*Iy(x,y)*index(x,y)+alpha*SmoothConst;
+   float denomU= Ct*Ix(x,y)*Ix(x,y)+alpha*SmoothConst;
+   float denomV= Ct*Iy(x,y)*Iy(x,y)+alpha*SmoothConst;
+   float u1=u(x+1,y)+du(x+1,y);
+   float u2=u(x-1,y)+du(x-1,y);
+   float u3=u(x,y+1)+du(x,y+1);
+   float u4=u(x,y-1)+du(x,y-1);
+   float SmoothU= alpha* (g_1*u1+g_2*u2+ g_3*u3+g_4*u4);
+ //  float dataTermU= (Ct*Ix(x,y)*Iy(x,y)*dv(x,y) + Ct*Ix(x,y)*Iz(x,y)) *index(x,y);
+   float v1=v(x+1,y)+dv(x+1,y);
+   float v2=v(x-1,y)+dv(x-1,y);
+   float v3=v(x,y+1)+dv(x,y+1);
+   float v4=v(x,y-1)+dv(x,y-1);
+   float SmoothV= alpha* (g_1*v1+g_2*v2+ g_3*v3+g_4*v4);
+  // float dataTermV= (Ct*Ix(x,y)*Iy(x,y)*du_new(x,y) + Ct*Iy(x,y)*Iz(x,y)) *index(x,y);
+    float dataTermU= (Ct*Ix(x,y)*Iy(x,y)*dv(x,y) + Ct*Ix(x,y)*Iz(x,y)) ;  
+  float dataTermV= (Ct*Ix(x,y)*Iy(x,y)*du(x,y) + Ct*Iy(x,y)*Iz(x,y)) ;
+     du_new(x,y)= ( SmoothU - dataTermU -u(x,y)*SmoothConst )/denomU;
 
-     du_new(x,y)= ( alpha*SmoothU - SmoothConst* u(x,y) - ( Ct*Iy(x,y)*Ix(x,y)*dv(x,y)+Iz(x,y)*Ix(x,y) ) * index(x,y) )/denomU;
 
+      dv_new(x,y)= ( SmoothV - dataTermV -v(x,y)*SmoothConst )/denomV;
+*/
+       du_new(x,y)=(alpha* (g_1*(u(x+1,y)+du(x+1,y))+g_2*(u(x-1,y)+du(x-1,y))+ g_3*(u(x,y+1)+du(x,y+1))+g_4*(u(x,y-1)+du(x,y-1))) - Ct*Ix(x,y)*Iy(x,y)*dv(x,y)*index(x,y) - Ct*Ix(x,y)*Iz(x,y)*index(x,y) -alpha*u(x,y)*(g_1+g_2+g_3+g_4) )/ (Ct*Ix(x,y)*Ix(x,y)*index(x,y)+alpha*(g_1+g_2+g_3+g_4));
 
-      dv_new(x,y)= ( alpha*SmoothV - SmoothConst* v(x,y) - ( Ct*Iy(x,y)*Ix(x,y)*du(x,y)+Iz(x,y)*Iy(x,y) ) * index(x,y) )/denomV;  
-   
-   //du_new(x,y)= (1 / ((g_1+g_2+g_3+g_4)*alpha + Ix(x,y)*Ix(x,y)) ) * ( alpha* (g_2*du(x-1,y)+g_1*du(x+1,y)+g_4*du(x,y-1)+g_3*du(x,y+1))  -Ix(x,y)*Iy(x,y)*dv(x,y) - Ix(x,y)*Iz(x,y) );
-            
+      dv_new(x,y)=(alpha* (g_1*(v(x+1,y)+dv(x+1,y))+g_2*(v(x-1,y)+dv(x-1,y))+ g_3*(v(x,y+1)+dv(x,y+1))+g_4*(v(x,y-1)+dv(x,y-1))) - Ct*Ix(x,y)*Iy(x,y)*du(x,y)*index(x,y) - Ct*Iy(x,y)*Iz(x,y)*index(x,y) -alpha*v(x,y)*(g_1+g_2+g_3+g_4) )/ (Ct*Iy(x,y)*Iy(x,y)*index(x,y)+alpha*(g_1+g_2+g_3+g_4));
 
-       //     dv_new(x,y) = (1/ ((g_1+g_2+g_3+g_4)*alpha+ Iy(x,y)*Iy(x,y)) )*(alpha* (g_2*dv(x-1,y)+g_1*dv(x+1,y)+g_4*dv(x,y-1)+g_3*dv(x,y+1)) - Iy(x,y)*Ix(x,y)*du(x,y) -Iy(x,y)*Iz(x,y) );
-          
 
         diff_u+=  (du_new(x,y)- du(x,y))* (du_new(x,y)- du(x,y));
         diff_v+=  (dv_new(x,y)- dv(x,y))* (dv_new(x,y)- dv(x,y));    
@@ -485,8 +512,8 @@ std::cin.get();
         dv=dv_new;
         diff_u=  diff_u/ number_of_pixels;
         diff_v=  diff_v/ number_of_pixels;
-        std::cout<<"diff_u "<<diff_u<<"\n";
-        std::cout<<"diff_v "<<diff_v<<"\n";
+     //  std::cout<<"diff_u "<<diff_u<<"\n";
+      //  std::cout<<"diff_v "<<diff_v<<"\n";
 
     }  while ( diff_u > treshold && diff_v> treshold);
 
@@ -516,10 +543,10 @@ int main(int argc, char** argv) {
   
 
     //optic flow parameters
-      float alpha = 500;
+      float alpha = 10;
      // float gamma =10;
       float treshold= 0.00000001;
-  //  float treshold= -0.00000001;
+ //  float treshold= 0.0000000001;
         int lvl=20; 
         float downsamplStep=0.95;
     std::string folderNameInput;

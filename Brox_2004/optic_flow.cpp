@@ -253,7 +253,7 @@ CTensor<float> OF::GaussSeidelHSTV(CMatrix<float> image1, CMatrix<float> image2,
         // v_k=Neumann_bound(v_k,border);
 
 
-       // calculateTV(u_k,v_k, g_1,g_2, g_3, g_4, border );
+     //  calculateTV(u_k,v_k, g_1,g_2, g_3, g_4, border );
           diff_u=  diff_u/ number_of_pixels;
           diff_v=  diff_v/ number_of_pixels;
         std::cout<<"diff_u "<<diff_u<<"\n";

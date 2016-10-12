@@ -1,7 +1,7 @@
 Computer vision: Optical Flow
 ====================================================
 All Optical Flow implementations can process only files in pgm format.
-In order to visualize the optical flow used the nextcolor scheme:
+In order to visualize the optical flow the next color scheme is used:
 <p align="center">
   <img src="https://github.com/Dtananaev/cv_opticFlow/blob/master/pictures/Color_scheme.JPG" width="700"/>
 </p>

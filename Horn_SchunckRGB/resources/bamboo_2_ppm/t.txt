@@ -1,3 +1,0 @@
-2
-frame_01.ppm
-frame_02.ppm

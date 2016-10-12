@@ -1,6 +1,11 @@
 Computer vision: Optical Flow
 ====================================================
 All Optical Flow implementations can process only files in pgm format.
+In order to visualize the optical flow used the nextcolor scheme:
+<p align="center">
+  <img src="https://github.com/Dtananaev/cv_opticFlow/blob/master/pictures/Color_scheme.JPG" width="700"/>
+</p>
+
 
 [![Build Status](https://travis-ci.org/Dtananaev/cv_filters.svg?branch=master)](https://travis-ci.org/Dtananaev/cv_filters)
 [![BSD2 License](http://img.shields.io/badge/license-BSD2-brightgreen.svg)](https://github.com/Dtananaev/cv_filters/blob/master/LICENSE.md) 

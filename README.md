@@ -8,7 +8,7 @@ All Optical Flow implementations can process only files in pgm format.
 It contains:
 
 * Lucas_Kanade - Lucas-Kanade optical flow. One of the first successful implementation of the optical flow based on gray value constancy assumption. 
- [![Lucas_Kanade](https://github.com/Dtananaev/ROS_nodes/blob/master/pictures/graph_planner.JPG)](https://www.youtube.com/watch?v=wd3EbR8unJQ)
+ [![Lucas_Kanade](https://github.com/Dtananaev/cv_opticFlow/blob/master/pictures/Lucas_Kanade.JPG)](https://www.youtube.com/watch?v=wd3EbR8unJQ)
      * To install use in terminal: 
           * cd ../cv_opticFlow/Lucas_Kanade
           * make

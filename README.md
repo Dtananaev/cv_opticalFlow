@@ -30,4 +30,4 @@ It contains:
      * To install use in terminal: 
        * cd ../cv_opticFlow/Horn_Schunck_TV
        * make
-     * To run: ./Horn_Schunck name_of_folder_with_picture_sequence 
+     * To run: ./Horn_Schunck_TV name_of_folder_with_picture_sequence 

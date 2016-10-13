@@ -28,6 +28,6 @@ It contains:
 * Horn_Schunck_TV - Horn_Schunck optical flow based on variational methods with total variation (TV) smoothsness term (robust penalizer for making sharp edges).
  [![ Horn_Schunck_TV ](https://github.com/Dtananaev/cv_opticFlow/blob/master/pictures/HS_TV.JPG)](https://www.youtube.com/watch?v=hO7HGA_PFD8)
      * To install use in terminal: 
-       * cd ../cv_opticFlow/Horn_Schunck
+       * cd ../cv_opticFlow/Horn_Schunck_TV
        * make
      * To run: ./Horn_Schunck name_of_folder_with_picture_sequence 

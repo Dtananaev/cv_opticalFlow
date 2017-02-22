@@ -31,3 +31,10 @@ It contains:
        * cd ../cv_opticFlow/Horn_Schunck_TV
        * make
      * To run: ./Horn_Schunck_TV name_of_folder_with_picture_sequence 
+     
+* Horn_Schunck_TVbothTerms - Horn_Schunck optical flow based on variational methods with total variation (TV) both terms.
+ [![ Horn_Schunck_TV ](https://github.com/Dtananaev/cv_opticFlow/blob/master/pictures/HS_both.JPG)](https://www.youtube.com/watch?v=fjWydzf33Zg)
+     * To install use in terminal: 
+       * cd ../cv_opticFlow/Horn_Schunck_TVbothTerms
+       * make
+     * To run: ./Horn_Schunck_TVbothTerms name_of_folder_with_picture_sequence 

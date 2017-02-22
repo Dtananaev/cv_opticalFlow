@@ -53,7 +53,7 @@ It contains:
        * make
      * To run: ./Brox_2004 name_of_folder_with_picture_sequence 
      
- * denoiz - filtering algorithm equivalent to Gauss blur filtering but based on the energy minimization approach.
+* denoiz - filtering algorithm equivalent to Gauss blur filtering but based on the energy minimization approach.
       * To install use in terminal: 
        * cd ../cv_opticFlow/denoiz
        * make

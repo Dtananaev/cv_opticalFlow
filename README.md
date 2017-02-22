@@ -38,3 +38,10 @@ It contains:
        * cd ../cv_opticFlow/Horn_Schunck_TVbothTerms
        * make
      * To run: ./Horn_Schunck_TVbothTerms name_of_folder_with_picture_sequence 
+     
+ * Horn_Schunck_TVbothTerms_Grad - Horn_Schunck optical flow based on variational methods with total variation (TV) both terms  plus gradient constancy assumption which makes optical flow robust to illumination changes.
+ [![ Horn_Schunck_TV ](https://github.com/Dtananaev/cv_opticFlow/blob/master/pictures/HS_grad.JPG)](https://www.youtube.com/watch?v=eNuUIlOj4SA)
+     * To install use in terminal: 
+       * cd ../cv_opticFlow/Horn_Schunck_TVbothTerms_Grad
+       * make
+     * To run: ./Horn_Schunck_TVbothTerms_Grad name_of_folder_with_picture_sequence 

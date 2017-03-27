@@ -22,19 +22,19 @@ script:
   - make
   - cd ..
 #Horn_Schunk
-  - cd Horn_Schunk
+  - cd Horn_Schunck
   - make
   - cd ..   
 #Horn_Schunk_TV
-  - cd Horn_Schunk_TV
+  - cd Horn_Schunck_TV
   - make
   - cd .. 
 #Horn_Schunk_TVbothTerms
-  - cd Horn_Schunk_TVbothTerms
+  - cd Horn_Schunck_TVbothTerms
   - make
   - cd .. 
 #Horn_Schunk_TVbothTerms_Grad
-  - cd Horn_Schunk_TVbothTerms_Grad
+  - cd Horn_Schunck_TVbothTerms_Grad
   - make
   - cd .. 
 #denoiz

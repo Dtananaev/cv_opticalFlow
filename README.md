@@ -7,7 +7,7 @@ In order to visualize the optical flow the next color scheme is used:
 </p>
 
 
-[![Build Status](https://travis-ci.org/Dtananaev/cv_filters.svg?branch=master)](https://travis-ci.org/Dtananaev/cv_filters)
+[![Build Status](https://travis-ci.org/Dtananaev/cv_opticalFlow.svg?branch=master)](https://travis-ci.org/Dtananaev/cv_opticalFlow)
 [![BSD2 License](http://img.shields.io/badge/license-BSD2-brightgreen.svg)](https://github.com/Dtananaev/cv_opticFlow/blob/master/LICENSE.md) 
      
 It contains:
@@ -37,7 +37,7 @@ It contains:
      * To install use in terminal: 
        * cd ../cv_opticFlow/Horn_Schunck_TVbothTerms
        * make
-     * To run: ./Horn_Schunck_TVbothTerms name_of_folder_with_picture_sequence 
+     * To run: ./Horn_Schunck_TVboth name_of_folder_with_picture_sequence 
      
 * Horn_Schunck_TVbothTerms_Grad - Horn_Schunck optical flow based on variational methods with total variation (TV) both terms  plus gradient constancy assumption which makes optical flow robust to illumination changes.
  [![ Horn_Schunck_TVbothTerms_Grad ](https://github.com/Dtananaev/cv_opticFlow/blob/master/pictures/HS_grad.JPG)](https://www.youtube.com/watch?v=eNuUIlOj4SA)

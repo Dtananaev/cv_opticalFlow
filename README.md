@@ -19,6 +19,7 @@ It contains:
        * cd ../cv_opticFlow/Lucas_Kanade
        * make
      * To run: ./Lucas_Kanade name_of_folder_with_picture_sequence 
+     
 * Horn_Schunck - Horn_Schunck optical flow based on variational methods.
  [![Horn_Schunck](https://github.com/Dtananaev/cv_opticFlow/blob/master/pictures/Horn_Schunck.JPG)](https://www.youtube.com/watch?v=vQioi02NS9A)
  
